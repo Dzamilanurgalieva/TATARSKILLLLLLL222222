@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Создать тест{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">Создать новый тест</h1>
+        <form method="post" id="test-form">
+            {% csrf_token %}
+            {{ test_form.as_p }}
+
+            <h3 class="mt-4">Вопросы</h3>
+            <div id="questions-container">
+                <div class="question-item card mb-3 p-3">
+                    <h4>Вопрос 1</h4>
+                    <input type="text" name="question_0_text" class="form-control mb-2" placeholder="Текст вопроса">
+                    <input type="text" name="question_0_option1" class="form-control mb-2" placeholder="Вариант 1">
+                    <input type="text" name="question_0_option2" class="form-control mb-2" placeholder="Вариант 2">
+                    <input type="text" name="question_0_option3" class="form-control mb-2" placeholder="Вариант 3 (необязательно)">
+                    <input type="text" name="question_0_option4" class="form-control mb-2" placeholder="Вариант 4 (необязательно)">
+                    <select name="question_0_correct_option" class="form-select mb-2">
+                        <option value="1">Правильный ответ: 1</option>
+                        <option value="2">Правильный ответ: 2</option>
+                        <option value="3">Правильный ответ: 3</option>
+                        <option value="4">Правильный ответ: 4</option>
+                    </select>
+                    <textarea name="question_0_explanation" class="form-control" placeholder="Пояснение (необязательно)"></textarea>
+                </div>
+            </div>
+            <button type="button" class="btn-outline-custom" id="add-question-btn">+ Добавить вопрос</button>
+            <button type="submit" class="btn-primary-custom mt-3">Отправить на модерацию</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let questionCount = 1;
+    document.getElementById('add-question-btn').addEventListener('click', function() {
+        const container = document.getElementById('questions-container');
+        const newQuestion = document.createElement('div');
+        newQuestion.className = 'question-item card mb-3 p-3';
+        newQuestion.innerHTML = `
+            <h4>Вопрос ${questionCount + 1}</h4>
+            <input type="text" name="question_${questionCount}_text" class="form-control mb-2" placeholder="Текст вопроса">
+            <input type="text" name="question_${questionCount}_option1" class="form-control mb-2" placeholder="Вариант 1">
+            <input type="text" name="question_${questionCount}_option2" class="form-control mb-2" placeholder="Вариант 2">
+            <input type="text" name="question_${questionCount}_option3" class="form-control mb-2" placeholder="Вариант 3 (необязательно)">
+            <input type="text" name="question_${questionCount}_option4" class="form-control mb-2" placeholder="Вариант 4 (необязательно)">
+            <select name="question_${questionCount}_correct_option" class="form-select mb-2">
+                <option value="1">Правильный ответ: 1</option>
+                <option value="2">Правильный ответ: 2</option>
+                <option value="3">Правильный ответ: 3</option>
+                <option value="4">Правильный ответ: 4</option>
+            </select>
+            <textarea name="question_${questionCount}_explanation" class="form-control" placeholder="Пояснение (необязательно)"></textarea>
+            <button type="button" class="btn-sm btn-danger remove-question">Удалить вопрос</button>
+        `;
+        container.appendChild(newQuestion);
+
+        newQuestion.querySelector('.remove-question').addEventListener('click', function() {
+            newQuestion.remove();
+        });
+
+        questionCount++;
+    });
+</script>
+{% endblock %}

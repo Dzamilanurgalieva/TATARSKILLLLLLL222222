@@ -1,0 +1,35 @@
+cat > main/templates/take_custom_test.html << 'EOF'
+{% extends 'base.html' %}
+
+{% block title %}Пройти тест: {{ test.title }}{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">{{ test.title }}</h1>
+        <p>Автор: {{ test.author.username }} | Сложность: {{ test.get_difficulty_display }}</p>
+        <p>🏆 За каждый правильный ответ вы получите {{ test.reward_coins_per_question }} монет!</p>
+
+        <form method="post">
+            {% csrf_token %}
+            {% for question in questions %}
+            <div class="card mb-4 p-3">
+                <h4>{{ forloop.counter }}. {{ question.text }}</h4>
+                <div class="ms-3">
+                    <label class="d-block"><input type="radio" name="question_{{ question.id }}" value="1"> {{ question.option1 }}</label>
+                    <label class="d-block"><input type="radio" name="question_{{ question.id }}" value="2"> {{ question.option2 }}</label>
+                    {% if question.option3 %}
+                    <label class="d-block"><input type="radio" name="question_{{ question.id }}" value="3"> {{ question.option3 }}</label>
+                    {% endif %}
+                    {% if question.option4 %}
+                    <label class="d-block"><input type="radio" name="question_{{ question.id }}" value="4"> {{ question.option4 }}</label>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn-primary-custom">Завершить тест</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+EOF
