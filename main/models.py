@@ -6,7 +6,7 @@ from django.dispatch import receiver
 from datetime import timedelta
 
 
-# ---------- Существующие модели (без изменений) ----------
+# ---------- Существующие модели ----------
 
 class Course(models.Model):
     """Модель для курсов"""
@@ -95,12 +95,25 @@ class Lesson(models.Model):
 
 
 class Community(models.Model):
+    """Модель сообщества (расширенная)"""
     name = models.CharField('Название сообщества', max_length=100)
+    slug = models.SlugField('URL-идентификатор', max_length=100, unique=True, blank=True)
     icon_class = models.CharField('Иконка (Font Awesome)', max_length=50, default='fas fa-users')
     description = models.CharField('Краткое описание', max_length=200)
     member_count = models.PositiveIntegerField('Количество участников', default=0)
     is_active = models.BooleanField('Активно', default=True)
     order = models.PositiveIntegerField('Порядок', default=0)
+    courses = models.ManyToManyField(Course, related_name='communities', blank=True, verbose_name='Связанные курсы')
+
+    # НОВЫЕ ПОЛЯ ДЛЯ СООБЩЕСТВ
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_communities',
+                              verbose_name='Создатель')
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    is_private = models.BooleanField('Закрытое сообщество', default=False)
+    join_password = models.CharField('Пароль для входа', max_length=100, blank=True, help_text='Для закрытых сообществ')
+    rules = models.TextField('Правила сообщества', blank=True)
+    cover_image = models.URLField('Ссылка на обложку', blank=True)
+    tags = models.CharField('Теги (через запятую)', max_length=200, blank=True)
 
     class Meta:
         verbose_name = 'Сообщество'
@@ -109,6 +122,95 @@ class Community(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def user_can_manage(self, user):
+        """Проверка, может ли пользователь управлять сообществом (владелец или модератор)"""
+        if not user.is_authenticated:
+            return False
+        if user == self.owner or user.is_superuser:
+            return True
+        return CommunityMembership.objects.filter(community=self, user=user, role__in=['moderator', 'admin']).exists()
+
+
+class CommunityMembership(models.Model):
+    """Участники сообщества с ролями"""
+    ROLE_CHOICES = [
+        ('member', 'Участник'),
+        ('moderator', 'Модератор'),
+        ('admin', 'Администратор'),
+    ]
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='memberships')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_memberships')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    joined_at = models.DateTimeField(auto_now_add=True)
+    is_banned = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ['community', 'user']
+
+
+class CommunityPost(models.Model):
+    """Пост в сообществе"""
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='posts')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_posts')
+    title = models.CharField('Заголовок', max_length=200)
+    content = models.TextField('Текст поста')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_pinned = models.BooleanField('Закреплён', default=False)
+    likes = models.ManyToManyField(User, related_name='liked_posts', blank=True)
+    comments_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-is_pinned', '-created_at']
+
+    def __str__(self):
+        return f'{self.community.name} - {self.title[:50]}'
+
+
+class CommunityComment(models.Model):
+    """Комментарий к посту"""
+    post = models.ForeignKey(CommunityPost, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_comments')
+    content = models.TextField('Текст комментария')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    likes = models.ManyToManyField(User, related_name='liked_comments', blank=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+
+class CommunityExternalLink(models.Model):
+    """Внешние ссылки сообщества (ВК, RUTUBE и др.)"""
+    LINK_TYPES = [
+        ('vkontakte', 'ВКонтакте (группа/паблик)'),
+        ('vkontakte_video', 'ВКонтакте видео'),
+        ('rutube', 'RUTUBE (канал)'),
+        ('website', 'Веб-сайт'),
+        ('other', 'Другое'),
+    ]
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='external_links')
+    link_type = models.CharField(max_length=20, choices=LINK_TYPES, verbose_name='Тип ресурса')
+    url = models.URLField(verbose_name='Ссылка')
+    title = models.CharField('Название', max_length=100, blank=True)
+    icon_class = models.CharField('Иконка (Font Awesome)', max_length=50, blank=True)
+    order = models.PositiveIntegerField('Порядок', default=0)
+    is_active = models.BooleanField('Активна', default=True)
+
+    class Meta:
+        verbose_name = 'Внешняя ссылка'
+        verbose_name_plural = 'Внешние ссылки'
+        ordering = ['community', 'order', 'link_type']
+
+    def __str__(self):
+        return f'{self.community.name} - {self.get_link_type_display()}'
 
 
 class Achievement(models.Model):
@@ -241,6 +343,8 @@ class Profile(models.Model):
     is_author = models.BooleanField('Автор (может создавать тесты)', default=False)
     created_at = models.DateTimeField('Дата регистрации', auto_now_add=True)
     last_active = models.DateTimeField('Последняя активность', auto_now=True)
+    last_selected_course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True,
+                                             verbose_name='Последний выбранный курс')
 
     class Meta:
         verbose_name = 'Профиль'
@@ -422,8 +526,6 @@ class DailyRewardLog(models.Model):
         unique_together = ['user', 'date']
 
 
-# ========== ОТЗЫВЫ НА КУРСЫ ==========
-
 class CourseReview(models.Model):
     """Отзыв на курс"""
     RATING_CHOICES = [
@@ -451,8 +553,6 @@ class CourseReview(models.Model):
     def __str__(self):
         return f'{self.user.username} — {self.course.title} — {self.rating}★'
 
-
-# ========== НОВЫЕ МОДЕЛИ ДЛЯ ПОЛЬЗОВАТЕЛЬСКИХ ТЕСТОВ ==========
 
 class CustomTest(models.Model):
     STATUS_CHOICES = [
@@ -520,7 +620,7 @@ class CustomTestResult(models.Model):
         ordering = ['-completed_at']
 
 
-# Сигналы для автоматического создания профиля
+# Сигналы
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:

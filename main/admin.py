@@ -1,12 +1,83 @@
 from django.contrib import admin
-from .models import Course, Lesson, Community, Achievement, Profile, Question, LessonCompletion
-from .models import League, LeagueInstance, UserLeagueMembership, SeasonalEvent, AchievementLevel, AchievementProgress, ShopItem, UserInventory, UserSubscription, DailyRewardLog, CustomTest, CustomQuestion, CustomTestResult
-from .models import CourseReview
+from .models import (
+    Course, Lesson, Community, CommunityMembership, CommunityPost, CommunityComment, CommunityExternalLink,
+    Achievement, Profile, Question, LessonCompletion, League, LeagueInstance,
+    UserLeagueMembership, SeasonalEvent, AchievementLevel, AchievementProgress,
+    ShopItem, UserInventory, UserSubscription, DailyRewardLog, CustomTest,
+    CustomQuestion, CustomTestResult, CourseReview
+)
+
+
+# ---- Inline для сообществ ----
+class CommunityMembershipInline(admin.TabularInline):
+    model = CommunityMembership
+    extra = 0
+    fields = ['user', 'role', 'is_banned', 'joined_at']
+    readonly_fields = ['joined_at']
+
+class CommunityExternalLinkInline(admin.TabularInline):
+    model = CommunityExternalLink
+    extra = 1
+    fields = ['link_type', 'url', 'title', 'icon_class', 'order', 'is_active']
+
+class CommunityPostInline(admin.TabularInline):
+    model = CommunityPost
+    extra = 0
+    fields = ['title', 'author', 'is_pinned', 'created_at']
+    readonly_fields = ['created_at']
+
+
+@admin.register(Community)
+class CommunityAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'owner', 'member_count', 'is_active', 'order', 'created_at']
+    list_filter = ['is_active', 'is_private', 'created_at']
+    search_fields = ['name', 'description', 'owner__username']
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ['is_active', 'order']
+    inlines = [CommunityMembershipInline, CommunityExternalLinkInline, CommunityPostInline]
+    fieldsets = (
+        ('Основное', {'fields': ('name', 'slug', 'description', 'icon_class', 'cover_image')}),
+        ('Доступ', {'fields': ('is_active', 'is_private', 'join_password', 'owner')}),
+        ('Дополнительно', {'fields': ('rules', 'tags', 'order', 'member_count', 'courses')}),
+    )
+    filter_horizontal = ['courses']
+
+
+@admin.register(CommunityMembership)
+class CommunityMembershipAdmin(admin.ModelAdmin):
+    list_display = ['community', 'user', 'role', 'is_banned', 'joined_at']
+    list_filter = ['role', 'is_banned', 'community']
+    search_fields = ['user__username', 'community__name']
+
+
+@admin.register(CommunityPost)
+class CommunityPostAdmin(admin.ModelAdmin):
+    list_display = ['title', 'community', 'author', 'created_at', 'is_pinned', 'comments_count']
+    list_filter = ['community', 'is_pinned']
+    search_fields = ['title', 'content', 'author__username']
+
+
+@admin.register(CommunityComment)
+class CommunityCommentAdmin(admin.ModelAdmin):
+    list_display = ['post', 'author', 'created_at']
+    list_filter = ['post__community']
+    search_fields = ['content', 'author__username']
+
+
+@admin.register(CommunityExternalLink)
+class CommunityExternalLinkAdmin(admin.ModelAdmin):
+    list_display = ['community', 'link_type', 'url', 'is_active', 'order']
+    list_filter = ['link_type', 'is_active', 'community']
+    search_fields = ['community__name', 'url']
+
+
+# ---- Остальные админки (существующие) ----
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'total_points', 'coins', 'tulips', 'level', 'streak_days', 'lessons_completed', 'is_author', 'created_at']
     search_fields = ['user__username', 'user__email']
     list_editable = ['coins', 'tulips', 'is_author']
+
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
@@ -22,7 +93,6 @@ class CourseAdmin(admin.ModelAdmin):
         ('Визуальное оформление', {'fields': ('icon_class', 'badge_text', 'badge_color'), 'classes': ('collapse',)}),
         ('Статус и даты', {'fields': ('status', 'order', 'published_at', 'is_official'), 'classes': ('collapse',)}),
     )
-
     actions = ['make_published', 'make_draft', 'make_official', 'make_unofficial']
 
     def make_published(self, request, queryset):
@@ -49,14 +119,6 @@ class LessonAdmin(admin.ModelAdmin):
     list_filter = ['course', 'section', 'is_free_preview']
     search_fields = ['title', 'content']
     list_editable = ['order', 'duration_minutes']
-
-
-@admin.register(Community)
-class CommunityAdmin(admin.ModelAdmin):
-    list_display = ['name', 'member_count', 'is_active', 'order']
-    list_filter = ['is_active']
-    search_fields = ['name', 'description']
-    list_editable = ['order', 'member_count', 'is_active']
 
 
 @admin.register(Achievement)
@@ -148,6 +210,7 @@ class CustomQuestionAdmin(admin.ModelAdmin):
 class CustomTestResultAdmin(admin.ModelAdmin):
     list_display = ['user', 'test', 'score', 'earned_coins', 'completed_at']
     list_filter = ['test', 'user']
+
 
 @admin.register(CourseReview)
 class CourseReviewAdmin(admin.ModelAdmin):

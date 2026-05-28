@@ -17,11 +17,13 @@ from django.urls import reverse
 import json
 from .services.mistral_service import MistralService
 from .models import (
-    Course, Community, Achievement, Lesson, Question, LessonCompletion, Profile,
+    Course, Community, CommunityMembership, CommunityPost, CommunityComment, CommunityExternalLink,
+    Achievement, Lesson, Question, LessonCompletion, Profile,
     League, LeagueInstance, UserLeagueMembership, SeasonalEvent, AchievementLevel,
     AchievementProgress, ShopItem, UserInventory, UserSubscription, DailyRewardLog,
     LEVEL_XP_BOUNDS, CourseEnrollment, CourseReview
 )
+from django.db.models import Count, Q
 
 mistral_service = MistralService()
 
@@ -29,29 +31,81 @@ mistral_service = MistralService()
 # ---------- СУЩЕСТВУЮЩИЕ VIEW ----------
 
 def home(request):
-    courses = Course.objects.filter(status='published').order_by('order', '-created_at')
-    communities = Community.objects.filter(is_active=True).order_by('order', 'name')
-    achievements = Achievement.objects.filter(is_active=True)
+    # ----- Логика выбора текущего курса -----
+    available_courses = []
+    current_course = None
 
-    # Получаем топ-3 пользователей по курсу "Татарский язык с нуля"
-    clan_leaderboard = []
-    try:
-        course = Course.objects.get(slug='tatarskii-yazyk-s-nulya', status='published')
-        enrollments = CourseEnrollment.objects.filter(course=course).select_related('user').order_by('-course_xp')[:3]
-        for enrollment in enrollments:
-            clan_leaderboard.append({
+    if request.user.is_authenticated:
+        enrolled_courses = Course.objects.filter(
+            enrollments__user=request.user,
+            status='published'
+        ).distinct().order_by('order', '-created_at')
+        available_courses = list(enrolled_courses)
+
+        course_slug = request.GET.get('course_id')
+        if course_slug:
+            try:
+                current_course = Course.objects.get(slug=course_slug, status='published')
+                request.session['current_course_slug'] = course_slug
+                profile = request.user.profile
+                profile.last_selected_course = current_course
+                profile.save(update_fields=['last_selected_course'])
+            except Course.DoesNotExist:
+                pass
+
+        if not current_course and 'current_course_slug' in request.session:
+            try:
+                current_course = Course.objects.get(slug=request.session['current_course_slug'], status='published')
+            except Course.DoesNotExist:
+                pass
+
+        if not current_course and request.user.profile.last_selected_course:
+            current_course = request.user.profile.last_selected_course
+            if current_course.status != 'published':
+                current_course = None
+
+        if not current_course and available_courses:
+            current_course = available_courses[0]
+            request.user.profile.last_selected_course = current_course
+            request.user.profile.save(update_fields=['last_selected_course'])
+            request.session['current_course_slug'] = current_course.slug
+
+    else:
+        available_courses = Course.objects.filter(status='published').order_by('order', '-created_at')
+        if available_courses:
+            current_course = available_courses[0]
+
+    if not current_course:
+        current_course = Course.objects.filter(status='published').first()
+
+    leaderboard = []
+    if current_course:
+        enrollments = CourseEnrollment.objects.filter(course=current_course).select_related('user').order_by('-course_xp')[:3]
+        for idx, enrollment in enumerate(enrollments, start=1):
+            leaderboard.append({
+                'rank': idx,
                 'username': enrollment.user.username,
                 'lessons_completed': enrollment.lessons_completed,
                 'course_xp': enrollment.course_xp,
             })
-    except Course.DoesNotExist:
-        pass
+
+    communities = []
+    if current_course:
+        communities = current_course.communities.filter(is_active=True).order_by('order', 'name')
+        if not communities:
+            communities = Community.objects.filter(is_active=True).order_by('order', 'name')[:10]
+
+    courses_list = Course.objects.filter(status='published').order_by('order', '-created_at')
+    achievements = Achievement.objects.filter(is_active=True)
 
     context = {
-        'courses': courses,
+        'courses': courses_list,
         'communities': communities,
         'achievements': achievements,
-        'clan_leaderboard': clan_leaderboard,
+        'clan_leaderboard': leaderboard,
+        'current_course': current_course,
+        'available_courses': available_courses,
+        'leaderboard': leaderboard,
     }
     return render(request, 'index.html', context)
 
@@ -180,7 +234,6 @@ def course_detail(request, slug):
     completed_count = len(completed_lessons)
     progress_percent = (completed_count / total_lessons) * 100 if total_lessons > 0 else 0
 
-    # === СРЕДНЯЯ ОЦЕНКА ===
     from django.db.models import Avg
     avg_rating = course.reviews.filter(is_approved=True).aggregate(Avg('rating'))['rating__avg'] or 0
     avg_rating = round(avg_rating, 1)
@@ -191,7 +244,7 @@ def course_detail(request, slug):
         'completed_lessons': completed_lessons,
         'unlocked_lessons': unlocked_lessons,
         'progress_percent': round(progress_percent, 1),
-        'avg_rating': avg_rating,  # <-- добавили
+        'avg_rating': avg_rating,
     }
     return render(request, 'course_detail.html', context)
 
@@ -291,25 +344,21 @@ def submit_test(request, lesson_id):
         completion.test_score = percentage
         completion.save()
 
-    # === НОВОЕ: обновляем прогресс в курсе ===
     enrollment, _ = CourseEnrollment.objects.get_or_create(
         user=request.user,
         course=lesson.course
     )
-    # Пересчитываем количество уникальных пройденных уроков в этом курсе
     unique_lessons_count = LessonCompletion.objects.filter(
         user=request.user,
         lesson__course=lesson.course
     ).values('lesson').distinct().count()
     enrollment.lessons_completed = unique_lessons_count
-    # Начисляем XP за этот урок, только если он пройден впервые
     if created:
         enrollment.course_xp += 150
         enrollment.save()
     else:
-        enrollment.save()  # сохраняем lessons_completed, даже если повторная сдача
+        enrollment.save()
 
-    # === Начисление глобальных наград (монеты, общий XP) ===
     if created:
         profile = request.user.profile
         profile.total_points += 150
@@ -320,30 +369,25 @@ def submit_test(request, lesson_id):
     else:
         messages.info(request, f'Тест пройден повторно. Результат: {percentage:.0f}%')
 
-    # Проверяем достижения, привязанные к курсу
     check_course_achievements(request.user, lesson.course, enrollment)
 
     return redirect('course_detail', slug=lesson.course.slug)
 
 
-# === НОВАЯ ФУНКЦИЯ: проверка достижений для конкретного курса ===
 def check_course_achievements(user, course, enrollment):
-    # Получаем все достижения, привязанные к этому курсу
     achievements = Achievement.objects.filter(course=course, is_active=True)
     for ach in achievements:
         levels = ach.levels.all()
         if levels:
             progress, _ = AchievementProgress.objects.get_or_create(user=user, achievement=ach)
             old_value = progress.current_value
-            # Например, используем lessons_completed для проверки
             new_value = enrollment.lessons_completed
             if new_value > old_value:
                 progress.current_value = new_value
                 progress.save()
-                progress.check_and_update()  # вызовет награду, если достигнут новый уровень
+                progress.check_and_update()
 
 
-# === НОВОЕ ПРЕДСТАВЛЕНИЕ: рейтинг курса (для отдельной страницы) ===
 def course_leaderboard(request, slug):
     course = get_object_or_404(Course, slug=slug, status='published')
     enrollments = CourseEnrollment.objects.filter(course=course).select_related('user').order_by('-course_xp')
@@ -361,8 +405,6 @@ def course_leaderboard(request, slug):
     }
     return render(request, 'course_leaderboard.html', context)
 
-
-# ---------- ОСТАЛЬНЫЕ VIEW (лиги, магазин, достижения) ----------
 
 def find_or_create_league_instance_for_user(user):
     league = League.objects.filter(rank_order=1).first()
@@ -489,9 +531,12 @@ def check_achievements_on_lesson_complete(user, lesson):
         update_achievement_progress(user, ach, profile.total_points)
 
 
-# === НОВОЕ ПРЕДСТАВЛЕНИЕ: рейтинг начального клана (отдельная страница) ===
 def clan_leaderboard(request):
-    course = get_object_or_404(Course, slug='tatarskii-yazyk-s-nulya', status='published')
+    course_slug = request.GET.get('course_id')
+    if course_slug:
+        course = get_object_or_404(Course, slug=course_slug, status='published')
+    else:
+        course = get_object_or_404(Course, slug='tatarskii-yazyk-s-nulya', status='published')
     enrollments = CourseEnrollment.objects.filter(course=course).select_related('user').order_by('-course_xp')
     leaderboard = []
     for idx, enrollment in enumerate(enrollments, start=1):
@@ -621,6 +666,8 @@ def take_custom_test(request, test_id):
         return redirect('public_tests')
 
     return render(request, 'take_custom_test.html', {'test': test, 'questions': questions})
+
+
 @login_required
 def create_course(request):
     profile = request.user.profile
@@ -648,7 +695,6 @@ def create_course(request):
 def edit_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
 
-    # Проверяем, что пользователь — автор курса или админ
     if course.author != request.user and not request.user.is_superuser:
         messages.error(request, 'Вы не можете редактировать этот курс.')
         return redirect('course_detail', slug=course.slug)
@@ -688,7 +734,6 @@ def add_lesson(request, course_id):
                 lesson.test_id = test_id
 
             lesson.save()
-            # Сохраняем 5 вопросов мини-теста
             for i in range(5):
                 text = request.POST.get(f'question_{i}_text')
                 if text:
@@ -719,8 +764,6 @@ def add_lesson(request, course_id):
         'form': form,
         'course': course,
         'user_tests': user_tests
-
-
     })
 
 
@@ -737,10 +780,8 @@ def edit_custom_test(request, test_id):
         if form.is_valid():
             form.save()
 
-            # Удаляем старые вопросы
             test.questions.all().delete()
 
-            # Добавляем новые вопросы
             question_index = 0
             while True:
                 text = request.POST.get(f'question_{question_index}_text')
@@ -844,7 +885,6 @@ def attach_test_to_course(request, course_id):
         messages.error(request, 'Вы не можете изменять тесты этого курса.')
         return redirect('course_detail', slug=course.slug)
 
-    # Получаем все опубликованные тесты автора (которые ещё не привязаны к этому курсу)
     user_tests = CustomTest.objects.filter(author=request.user, status='approved').exclude(attached_courses=course)
 
     if request.method == 'POST':
@@ -862,13 +902,11 @@ def attach_test_to_course(request, course_id):
 def add_course_review(request, slug):
     course = get_object_or_404(Course, slug=slug, status='published')
 
-    # Проверяем, записан ли пользователь на курс (прошёл хотя бы один урок)
     has_completed = CourseEnrollment.objects.filter(user=request.user, course=course).exists()
     if not has_completed:
         messages.error(request, 'Вы можете оставить отзыв только после изучения курса.')
         return redirect('course_detail', slug=course.slug)
 
-    # Проверяем, не оставлял ли пользователь уже отзыв
     existing_review = CourseReview.objects.filter(user=request.user, course=course).first()
     if existing_review:
         messages.error(request, 'Вы уже оставили отзыв на этот курс.')
@@ -893,3 +931,283 @@ def add_course_review(request, slug):
         return redirect('course_detail', slug=course.slug)
 
     return render(request, 'add_course_review.html', {'course': course})
+
+
+# ========== НОВЫЕ ПРЕДСТАВЛЕНИЯ ДЛЯ СООБЩЕСТВ ==========
+
+def community_list(request):
+    communities = Community.objects.filter(is_active=True)
+    query = request.GET.get('q')
+    if query:
+        communities = communities.filter(Q(name__icontains=query) | Q(description__icontains=query) | Q(tags__icontains=query))
+    sort = request.GET.get('sort', 'members')
+    if sort == 'members':
+        communities = communities.order_by('-member_count')
+    elif sort == 'new':
+        communities = communities.order_by('-created_at')
+    else:
+        communities = communities.order_by('order', 'name')
+    return render(request, 'main/community_list.html', {'communities': communities})
+
+
+@login_required
+def community_create(request):
+    if request.method == 'POST':
+        form = CommunityForm(request.POST)
+        if form.is_valid():
+            community = form.save(commit=False)
+            community.owner = request.user
+            community.save()
+            form.save_m2m()
+            CommunityMembership.objects.create(community=community, user=request.user, role='admin')
+            community.member_count = 1
+            community.save()
+            messages.success(request, f'Сообщество "{community.name}" успешно создано!')
+            return redirect('community_detail', slug=community.slug)
+    else:
+        form = CommunityForm()
+    return render(request, 'main/community_create.html', {'form': form})
+
+
+def community_detail(request, slug):
+    community = get_object_or_404(Community, slug=slug, is_active=True)
+    user = request.user
+    membership = None
+    if user.is_authenticated:
+        membership = CommunityMembership.objects.filter(community=community, user=user).first()
+    if community.is_private and not membership and not user.is_superuser:
+        if request.method == 'POST' and request.POST.get('password') == community.join_password:
+            CommunityMembership.objects.create(community=community, user=user, role='member')
+            community.member_count += 1
+            community.save()
+            messages.success(request, f'Вы вступили в сообщество "{community.name}"!')
+            return redirect('community_detail', slug=community.slug)
+        return render(request, 'main/community_private.html', {'community': community})
+
+    posts = community.posts.select_related('author').annotate(
+        comments_count=Count('comments')
+    ).order_by('-is_pinned', '-created_at')
+    external_links = community.external_links.filter(is_active=True).order_by('order')
+    week_ago = timezone.now() - timedelta(days=7)
+    top_members = User.objects.filter(
+        community_posts__community=community,
+        community_posts__created_at__gte=week_ago
+    ).annotate(activity_count=Count('community_posts')).order_by('-activity_count')[:5]
+    context = {
+        'community': community,
+        'posts': posts,
+        'external_links': external_links,
+        'top_members': top_members,
+        'membership': membership,
+    }
+    return render(request, 'main/community_detail.html', context)
+
+
+@login_required
+def community_join(request, slug):
+    community = get_object_or_404(Community, slug=slug, is_active=True)
+    membership = CommunityMembership.objects.filter(community=community, user=request.user).first()
+    if not membership:
+        CommunityMembership.objects.create(community=community, user=request.user, role='member')
+        community.member_count += 1
+        community.save()
+        messages.success(request, f'Вы вступили в сообщество "{community.name}"!')
+    else:
+        messages.info(request, 'Вы уже состоите в этом сообществе.')
+    return redirect('community_detail', slug=community.slug)
+
+
+@login_required
+def community_leave(request, slug):
+    community = get_object_or_404(Community, slug=slug)
+    membership = CommunityMembership.objects.filter(community=community, user=request.user).first()
+    if membership and membership.role != 'admin' and community.owner != request.user:
+        membership.delete()
+        community.member_count -= 1
+        community.save()
+        messages.success(request, f'Вы покинули сообщество "{community.name}".')
+    else:
+        messages.error(request, 'Вы не можете покинуть сообщество, так как являетесь его владельцем или администратором.')
+    return redirect('community_detail', slug=community.slug)
+
+
+@login_required
+def community_add_post(request, slug):
+    community = get_object_or_404(Community, slug=slug)
+    membership = CommunityMembership.objects.filter(community=community, user=request.user).first()
+    if not membership:
+        messages.error(request, 'Вы должны состоять в сообществе, чтобы создавать посты.')
+        return redirect('community_detail', slug=slug)
+    if request.method == 'POST':
+        form = CommunityPostForm(request.POST)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.community = community
+            post.author = request.user
+            post.save()
+            messages.success(request, 'Ваш пост опубликован!')
+            return redirect('community_detail', slug=slug)
+    else:
+        form = CommunityPostForm()
+    return render(request, 'main/community_add_post.html', {'form': form, 'community': community})
+
+
+@login_required
+def community_edit_post(request, post_id):
+    post = get_object_or_404(CommunityPost, id=post_id)
+    community = post.community
+    if not (request.user == post.author or community.user_can_manage(request.user)):
+        messages.error(request, 'У вас нет прав на редактирование этого поста.')
+        return redirect('community_detail', slug=community.slug)
+    if request.method == 'POST':
+        form = CommunityPostForm(request.POST, instance=post)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Пост обновлён.')
+            return redirect('community_detail', slug=community.slug)
+    else:
+        form = CommunityPostForm(instance=post)
+    return render(request, 'main/community_edit_post.html', {'form': form, 'post': post, 'community': community})
+
+
+@login_required
+def community_delete_post(request, post_id):
+    post = get_object_or_404(CommunityPost, id=post_id)
+    community = post.community
+    if not (request.user == post.author or community.user_can_manage(request.user)):
+        messages.error(request, 'Недостаточно прав.')
+        return redirect('community_detail', slug=community.slug)
+    post.delete()
+    messages.success(request, 'Пост удалён.')
+    return redirect('community_detail', slug=community.slug)
+
+
+@login_required
+def community_like_post(request, post_id):
+    post = get_object_or_404(CommunityPost, id=post_id)
+    if request.user in post.likes.all():
+        post.likes.remove(request.user)
+    else:
+        post.likes.add(request.user)
+    return redirect('community_detail', slug=post.community.slug)
+
+
+@login_required
+def community_add_comment(request, post_id):
+    post = get_object_or_404(CommunityPost, id=post_id)
+    community = post.community
+    membership = CommunityMembership.objects.filter(community=community, user=request.user).first()
+    if not membership:
+        messages.error(request, 'Вы должны быть участником сообщества, чтобы комментировать.')
+        return redirect('community_detail', slug=community.slug)
+    if request.method == 'POST':
+        form = CommunityCommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.post = post
+            comment.author = request.user
+            comment.save()
+            post.comments_count += 1
+            post.save()
+            messages.success(request, 'Комментарий добавлен.')
+    return redirect('community_detail', slug=community.slug)
+
+
+@login_required
+def community_delete_comment(request, comment_id):
+    comment = get_object_or_404(CommunityComment, id=comment_id)
+    community = comment.post.community
+    if not (request.user == comment.author or community.user_can_manage(request.user)):
+        messages.error(request, 'Недостаточно прав.')
+        return redirect('community_detail', slug=community.slug)
+    comment.post.comments_count -= 1
+    comment.post.save()
+    comment.delete()
+    messages.success(request, 'Комментарий удалён.')
+    return redirect('community_detail', slug=community.slug)
+
+
+@login_required
+def community_add_link(request, slug):
+    community = get_object_or_404(Community, slug=slug)
+    if not community.user_can_manage(request.user):
+        messages.error(request, 'У вас нет прав на управление ссылками.')
+        return redirect('community_detail', slug=slug)
+    if request.method == 'POST':
+        form = CommunityExternalLinkForm(request.POST)
+        if form.is_valid():
+            link = form.save(commit=False)
+            link.community = community
+            link.save()
+            messages.success(request, 'Ссылка добавлена.')
+            return redirect('community_detail', slug=slug)
+    else:
+        form = CommunityExternalLinkForm()
+    return render(request, 'main/community_add_link.html', {'form': form, 'community': community})
+
+
+@login_required
+def community_edit_link(request, link_id):
+    link = get_object_or_404(CommunityExternalLink, id=link_id)
+    community = link.community
+    if not community.user_can_manage(request.user):
+        messages.error(request, 'Недостаточно прав.')
+        return redirect('community_detail', slug=community.slug)
+    if request.method == 'POST':
+        form = CommunityExternalLinkForm(request.POST, instance=link)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Ссылка обновлена.')
+            return redirect('community_detail', slug=community.slug)
+    else:
+        form = CommunityExternalLinkForm(instance=link)
+    return render(request, 'main/community_edit_link.html', {'form': form, 'link': link, 'community': community})
+
+
+@login_required
+def community_delete_link(request, link_id):
+    link = get_object_or_404(CommunityExternalLink, id=link_id)
+    community = link.community
+    if not community.user_can_manage(request.user):
+        messages.error(request, 'Недостаточно прав.')
+        return redirect('community_detail', slug=community.slug)
+    link.delete()
+    messages.success(request, 'Ссылка удалена.')
+    return redirect('community_detail', slug=community.slug)
+
+
+@login_required
+def community_manage(request, slug):
+    community = get_object_or_404(Community, slug=slug)
+    if not community.user_can_manage(request.user):
+        messages.error(request, 'Доступ запрещён.')
+        return redirect('community_detail', slug=slug)
+    members = CommunityMembership.objects.filter(community=community).select_related('user').order_by('-joined_at')
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        new_role = request.POST.get('role')
+        action = request.POST.get('action')
+        membership = CommunityMembership.objects.filter(community=community, user_id=user_id).first()
+        if membership:
+            if action == 'ban':
+                membership.is_banned = True
+                membership.save()
+                messages.success(request, 'Пользователь забанен.')
+            elif action == 'unban':
+                membership.is_banned = False
+                membership.save()
+                messages.success(request, 'Бан снят.')
+            elif new_role in dict(CommunityMembership.ROLE_CHOICES):
+                membership.role = new_role
+                membership.save()
+                messages.success(request, 'Роль изменена.')
+        return redirect('community_manage', slug=slug)
+    return render(request, 'main/community_manage.html', {'community': community, 'members': members})
+
+
+def community_search(request):
+    query = request.GET.get('q', '')
+    communities = Community.objects.filter(is_active=True)
+    if query:
+        communities = communities.filter(Q(name__icontains=query) | Q(description__icontains=query) | Q(tags__icontains=query))
+    return render(request, 'main/community_search_results.html', {'communities': communities, 'query': query})

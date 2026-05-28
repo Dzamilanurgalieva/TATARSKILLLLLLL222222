@@ -10,695 +10,119 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f5f8f2;
-            color: #1a3a1a;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        /* ----- СЛОИ ФОНА: кремль справа, ярче и выше ----- */
-        .background-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            pointer-events: none;
-        }
-        .architecture {
-            position: absolute;
-            bottom: 15%;
-            right: 0;
-            width: 60%;
-            max-width: 800px;
-            height: auto;
-            z-index: 0;
-            text-align: right;
-            opacity: 0.7;
-        }
-        .architecture img {
-            width: 100%;
-            height: auto;
-            filter: none;
-        }
-
-        /* ----- КОНТЕЙНЕР ВСЕГО КОНТЕНТА ----- */
-        .main-container {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-        }
-
-        /* Навигация — все элементы в одну строку без переноса, сдвинута левее, поднята выше */
-        .navbar-custom {
-            background: transparent;
-            padding: 8px 0;
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 20;
-        }
-        .navbar-custom .container-custom {
-            width: 100%;
-            max-width: none;
-            margin: 0;
-            padding: 0 32px;
-            padding-left: 10px;
-            position: relative;
-            transform: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: nowrap;
-        }
-        .navbar-custom.scrolled {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-        }
-        .navbar-brand {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #2c5e2e;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            white-space: nowrap;
-        }
-        .navbar-brand img {
-            height: 90px;
-            width: auto;
-        }
-        .nav-links {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: nowrap;
-        }
-        .nav-links a {
-            color: #1a3a1a;
-            font-weight: 500;
-            font-size: 1rem;
-            transition: 0.2s;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-        .nav-links a:hover {
-            color: #6a8a5a;
-        }
-        .lang-btn {
-            background: transparent;
-            border: 1px solid rgba(80, 110, 70, 0.5);
-            color: #1a3a1a;
-            padding: 4px 10px;
-            border-radius: 40px;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: all 0.2s;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        .lang-btn.active {
-            background: #6a8a5a;
-            color: white;
-            border-color: #6a8a5a;
-        }
-        .btn-outline-light-custom {
-            border: 2px solid #6a8a5a;
-            background: white;
-            color: #1a3a1a;
-            padding: 6px 18px;
-            border-radius: 40px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: 0.2s;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-        .btn-outline-light-custom:hover {
-            background: #6a8a5a;
-            color: white;
-        }
-        .btn-primary-custom {
-            background: linear-gradient(135deg, #7cb342, #558b2f);
-            border: none;
-            color: white;
-            font-weight: 700;
-            padding: 6px 18px;
-            font-size: 0.9rem;
-            border-radius: 40px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(124,179,66,0.3);
-            text-decoration: none;
-            white-space: nowrap;
-        }
-        .btn-primary-custom:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 18px rgba(124,179,66,0.4);
-            color: white;
-        }
-        .course-sale .btn-primary-custom {
-            padding: 8px 24px;
-            font-size: 1rem;
-        }
-        .user-stats {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-right: 8px;
-            white-space: nowrap;
-        }
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 600;
-            color: #1a3a1a;
-            font-size: 1rem;
-        }
-        .stat-item i {
-            color: #e8b830;
-            font-size: 1rem;
-        }
-        .text-dark {
-            font-size: 1rem;
-            white-space: nowrap;
-        }
-
-        /* Левый текстовый блок — сдвинут чуть левее, буквы крупнее */
-        .hero-text-block {
-            background: transparent;
-            backdrop-filter: none;
-            border-radius: 0;
-            padding: 32px 40px;
-            max-width: 780px;
-            margin-top: 60px;
-            margin-left: 0px;
-            box-shadow: none;
-            border: none;
-        }
-        .hero-badge {
-            display: inline-block;
-            background: rgba(100, 140, 80, 0.15);
-            padding: 6px 16px;
-            border-radius: 100px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #1a3a1a;
-            margin-bottom: 20px;
-        }
-        .hero-title {
-            font-size: 3.5rem;
-            font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 20px;
-            color: #1a3a1a;
-        }
-        .hero-title span {
-            background: linear-gradient(135deg, #e8b830, #d4a020);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        .hero-text {
-            font-size: 1.1rem;
-            line-height: 1.5;
-            color: #2a4a2a;
-            margin-bottom: 28px;
-        }
-        .btn-hero {
-            background: linear-gradient(135deg, #7cb342, #558b2f);
-            padding: 14px 36px;
-            font-size: 1.1rem;
-            border-radius: 50px;
-            color: white;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: 0.3s;
-            text-decoration: none;
-            border: none;
-        }
-        .btn-hero:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 25px -8px rgba(124,179,66,0.5);
-            color: white;
-        }
-
-        /* Дракон — изначально большой */
-        .dragon-front {
-            position: fixed;
-            bottom: 20px;
-            right: -50px;
-            width: 500px;
-            max-width: 55vw;
-            z-index: 100;
-            cursor: pointer;
-            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));
-            transition: width 0.3s ease, max-width 0.3s ease, right 0.3s ease;
-        }
-        .dragon-front.small {
-            width: 350px;
-            max-width: 45vw;
-            right: -50px;
-        }
-        .dragon-front:hover {
-            transform: scale(1.03);
-        }
-
-        /* Колокольчик уведомлений */
-        @keyframes ring {
-            0% { transform: rotate(0); }
-            10% { transform: rotate(15deg); }
-            20% { transform: rotate(-10deg); }
-            30% { transform: rotate(5deg); }
-            40% { transform: rotate(-5deg); }
-            50% { transform: rotate(0); }
-            100% { transform: rotate(0); }
-        }
-
-        /* Чат-поп-ап — слева, ниже */
-        .chat-popup {
-            position: fixed;
-            bottom: 100px;
-            left: 825px;
-            width: 360px;
-            background: rgba(255,255,255,0.98);
-            border-radius: 28px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            z-index: 999;
-            border: 1px solid rgba(100,140,80,0.3);
-        }
-        .chat-header {
-            background: linear-gradient(135deg, #c8e0b5, #b0d0a0);
-            padding: 14px 20px;
-            color: #1a3a1a;
-            font-weight: 700;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-        }
-        .chat-messages {
-            height: 300px;
-            overflow-y: auto;
-            padding: 16px;
-            background: #fafdf8;
-        }
-        .chat-input-area {
-            display: flex;
-            gap: 10px;
-            padding: 16px;
-            border-top: 1px solid #e0e8dc;
-            background: white;
-        }
-        .chat-input {
-            flex: 1;
-            border-radius: 40px;
-            padding: 10px 16px;
-            border: 1px solid #d0dcd0;
-            outline: none;
-            background: #fafdf8;
-        }
-
-        /* Карточки курсов, сообществ — сдвинуты вправо */
-        .content-wrapper {
-            margin-left: 60px;
-        }
-        .card-glass {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(4px);
-            border-radius: 28px;
-            border: 1px solid rgba(100,140,80,0.2);
-            transition: all 0.3s ease;
-        }
-        .course-sale {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(4px);
-            border-radius: 28px;
-            border: 1px solid rgba(100,140,80,0.3);
-            position: relative;
-            overflow: hidden;
-        }
-        .sale-badge {
-            position: absolute;
-            top: 20px;
-            right: -35px;
-            background: #e8b830;
-            color: #1a3a1a;
-            padding: 6px 40px;
-            transform: rotate(45deg);
-            font-weight: 800;
-            font-size: 0.8rem;
-        }
-        .old-price {
-            text-decoration: line-through;
-            color: #5a7a5a;
-            font-size: 1.2rem;
-        }
-        .new-price {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #4a6a3a;
-        }
-        .btn-outline-custom {
-            background: transparent;
-            border: 2px solid #6a8a5a;
-            color: #1a3a1a;
-            font-weight: 600;
-            padding: 12px 32px;
-            border-radius: 12px;
-            transition: all 0.2s;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .btn-outline-custom:hover {
-            background: rgba(100, 140, 80, 0.1);
-            transform: translateY(-2px);
-            border-color: #5a7a4a;
-            color: #1a3a1a;
-        }
-        .communities-wrapper {
-            position: relative;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 70px;
-        }
-        .swiper-communities {
-            overflow: visible;
-        }
-        .swiper-communities .swiper-slide {
-            width: 320px;
-            flex-shrink: 0;
-        }
-        .swiper-button-prev-comm, .swiper-button-next-comm {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 52px;
-            height: 52px;
-            background: rgba(100, 140, 80, 0.8);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 20;
-            transition: 0.2s;
-            color: white;
-            font-size: 1.4rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
+        /* Все стили остаются такими же, как в вашем оригинальном index.html */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f8f2; color: #1a3a1a; overflow-x: hidden; position: relative; }
+        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .architecture { position: absolute; bottom: 15%; right: 0; width: 60%; max-width: 800px; height: auto; z-index: 0; text-align: right; opacity: 0.7; }
+        .architecture img { width: 100%; height: auto; filter: none; }
+        .main-container { position: relative; z-index: 10; width: 100%; }
+        .navbar-custom { background: transparent; padding: 8px 0; transition: all 0.3s ease; position: relative; z-index: 20; }
+        .navbar-custom .container-custom { width: 100%; max-width: none; margin: 0; padding: 0 32px; padding-left: 10px; position: relative; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; }
+        .navbar-custom.scrolled { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .navbar-brand { font-size: 1.8rem; font-weight: 800; color: #2c5e2e; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        .navbar-brand img { height: 90px; width: auto; }
+        .nav-links { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; }
+        .nav-links a { color: #1a3a1a; font-weight: 500; font-size: 1rem; transition: 0.2s; text-decoration: none; white-space: nowrap; }
+        .nav-links a:hover { color: #6a8a5a; }
+        .lang-btn { background: transparent; border: 1px solid rgba(80, 110, 70, 0.5); color: #1a3a1a; padding: 4px 10px; border-radius: 40px; font-size: 1rem; font-weight: 500; transition: all 0.2s; cursor: pointer; white-space: nowrap; }
+        .lang-btn.active { background: #6a8a5a; color: white; border-color: #6a8a5a; }
+        .btn-outline-light-custom { border: 2px solid #6a8a5a; background: white; color: #1a3a1a; padding: 6px 18px; border-radius: 40px; font-size: 0.9rem; font-weight: 600; transition: 0.2s; text-decoration: none; white-space: nowrap; }
+        .btn-outline-light-custom:hover { background: #6a8a5a; color: white; }
+        .btn-primary-custom { background: linear-gradient(135deg, #7cb342, #558b2f); border: none; color: white; font-weight: 700; padding: 6px 18px; font-size: 0.9rem; border-radius: 40px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(124,179,66,0.3); text-decoration: none; white-space: nowrap; }
+        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(124,179,66,0.4); color: white; }
+        .course-sale .btn-primary-custom { padding: 8px 24px; font-size: 1rem; }
+        .user-stats { display: flex; gap: 10px; align-items: center; margin-right: 8px; white-space: nowrap; }
+        .stat-item { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #1a3a1a; font-size: 1rem; }
+        .stat-item i { color: #e8b830; font-size: 1rem; }
+        .text-dark { font-size: 1rem; white-space: nowrap; }
+        .hero-text-block { background: transparent; backdrop-filter: none; border-radius: 0; padding: 32px 40px; max-width: 780px; margin-top: 60px; margin-left: 0px; box-shadow: none; border: none; }
+        .hero-badge { display: inline-block; background: rgba(100, 140, 80, 0.15); padding: 6px 16px; border-radius: 100px; font-size: 0.9rem; font-weight: 500; color: #1a3a1a; margin-bottom: 20px; }
+        .hero-title { font-size: 3.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 20px; color: #1a3a1a; }
+        .hero-title span { background: linear-gradient(135deg, #e8b830, #d4a020); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .hero-text { font-size: 1.1rem; line-height: 1.5; color: #2a4a2a; margin-bottom: 28px; }
+        .btn-hero { background: linear-gradient(135deg, #7cb342, #558b2f); padding: 14px 36px; font-size: 1.1rem; border-radius: 50px; color: white; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; transition: 0.3s; text-decoration: none; border: none; }
+        .btn-hero:hover { transform: translateY(-3px); box-shadow: 0 15px 25px -8px rgba(124,179,66,0.5); color: white; }
+        .dragon-front { position: fixed; bottom: 20px; right: -50px; width: 500px; max-width: 55vw; z-index: 100; cursor: pointer; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15)); transition: width 0.3s ease, max-width 0.3s ease, right 0.3s ease; }
+        .dragon-front.small { width: 350px; max-width: 45vw; right: -50px; }
+        .dragon-front:hover { transform: scale(1.03); }
+        @keyframes ring { 0% { transform: rotate(0); } 10% { transform: rotate(15deg); } 20% { transform: rotate(-10deg); } 30% { transform: rotate(5deg); } 40% { transform: rotate(-5deg); } 50% { transform: rotate(0); } 100% { transform: rotate(0); } }
+        .chat-popup { position: fixed; bottom: 100px; left: 825px; width: 360px; background: rgba(255,255,255,0.98); border-radius: 28px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; z-index: 999; border: 1px solid rgba(100,140,80,0.3); }
+        .chat-header { background: linear-gradient(135deg, #c8e0b5, #b0d0a0); padding: 14px 20px; color: #1a3a1a; font-weight: 700; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .chat-messages { height: 300px; overflow-y: auto; padding: 16px; background: #fafdf8; }
+        .chat-input-area { display: flex; gap: 10px; padding: 16px; border-top: 1px solid #e0e8dc; background: white; }
+        .chat-input { flex: 1; border-radius: 40px; padding: 10px 16px; border: 1px solid #d0dcd0; outline: none; background: #fafdf8; }
+        .content-wrapper { margin-left: 60px; }
+        .card-glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px); border-radius: 28px; border: 1px solid rgba(100,140,80,0.2); transition: all 0.3s ease; }
+        .course-sale { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px); border-radius: 28px; border: 1px solid rgba(100,140,80,0.3); position: relative; overflow: hidden; }
+        .sale-badge { position: absolute; top: 20px; right: -35px; background: #e8b830; color: #1a3a1a; padding: 6px 40px; transform: rotate(45deg); font-weight: 800; font-size: 0.8rem; }
+        .old-price { text-decoration: line-through; color: #5a7a5a; font-size: 1.2rem; }
+        .new-price { font-size: 2rem; font-weight: 800; color: #4a6a3a; }
+        .btn-outline-custom { background: transparent; border: 2px solid #6a8a5a; color: #1a3a1a; font-weight: 600; padding: 12px 32px; border-radius: 12px; transition: all 0.2s; text-decoration: none; display: inline-block; }
+        .btn-outline-custom:hover { background: rgba(100, 140, 80, 0.1); transform: translateY(-2px); border-color: #5a7a4a; color: #1a3a1a; }
+        .communities-wrapper { position: relative; max-width: 1400px; margin: 0 auto; padding: 0 70px; }
+        .swiper-communities { overflow: visible; }
+        .swiper-communities .swiper-slide { width: 320px; flex-shrink: 0; }
+        .swiper-button-prev-comm, .swiper-button-next-comm { position: absolute; top: 50%; transform: translateY(-50%); width: 52px; height: 52px; background: rgba(100, 140, 80, 0.8); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; transition: 0.2s; color: white; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .swiper-button-prev-comm { left: 0; }
         .swiper-button-next-comm { right: 0; }
-        .community-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(4px);
-            border-radius: 28px;
-            padding: 24px;
-            text-align: center;
-            transition: all 0.3s;
-            border: 1px solid rgba(100,140,80,0.2);
-            cursor: pointer;
-            height: 100%;
-        }
-        .community-card:hover {
-            transform: translateY(-6px);
-            border-color: #8aaa7a;
-            background: rgba(255, 255, 255, 0.95);
-        }
-        .community-icon {
-            width: 70px;
-            height: 70px;
-            background: rgba(100, 140, 80, 0.15);
-            border-radius: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 2rem;
-            color: #6a8a5a;
-        }
-        .clans-section {
-            background: rgba(200, 230, 180, 0.2);
-            border-radius: 48px;
-            padding: 40px;
-            margin: 40px 0;
-            border: 1px solid rgba(100,140,80,0.2);
-        }
-        .clan-card {
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 24px;
-            padding: 20px;
-            transition: 0.3s;
-            cursor: pointer;
-            border: 1px solid rgba(100,140,80,0.2);
-            margin-bottom: 12px;
-        }
-        .clan-card:hover {
-            border-color: #8aaa7a;
-            transform: translateY(-4px);
-            background: rgba(255, 255, 255, 0.8);
-        }
-        .clan-rank {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #6a8a5a;
-        }
-        .clan-score {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #1a3a1a;
-        }
-        .achievements-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 16px;
-        }
-        .achievement-item {
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 20px;
-            padding: 16px;
-            text-align: center;
-            transition: 0.2s;
-            border: 1px solid rgba(100,140,80,0.2);
-        }
-        .achievement-item.locked {
-            filter: grayscale(0.5);
-            opacity: 0.6;
-        }
-        .achievement-item.unlocked {
-            background: rgba(100, 140, 80, 0.2);
-            border-color: #8aaa7a;
-        }
-        .section-title {
-            font-size: 2.3rem;
-            font-weight: 700;
-            margin-bottom: 16px;
-            color: #1a3a1a;
-        }
-        .section-subtitle {
-            color: #2a4a2a;
-            font-size: 1.1rem;
-        }
-        footer {
-            background: rgba(30, 50, 30, 0.05);
-            color: #2a4a2a;
-            margin-top: 80px;
-            padding: 40px 0 20px;
-            position: relative;
-            z-index: 5;
-            border-top: 1px solid rgba(100,140,80,0.2);
-        }
-        footer a {
-            color: #4a6a3a;
-            text-decoration: none;
-        }
-        .container-custom {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 0 24px;
-            position: relative;
-        }
-        .content-wrapper .container-custom {
-            transform: none;
-        }
-
-        /* ---------- СОВРЕМЕННЫЙ РЕЙТИНГ КЛАНА ---------- */
-        .leaderboard-card {
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(12px);
-            border-radius: 32px;
-            border: 1px solid rgba(100, 140, 80, 0.3);
-            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            overflow: hidden;
-        }
-        .leaderboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.2);
-        }
-        .leaderboard-header {
-            background: linear-gradient(135deg, #6a9c3e, #8bc34a);
-            padding: 20px 24px;
-            color: white;
-            border-bottom: 2px solid rgba(255,255,255,0.2);
-        }
-        .leaderboard-header h3 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 1.6rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .leaderboard-header h3 i {
-            font-size: 1.8rem;
-            color: #ffd966;
-        }
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .leaderboard-table th {
-            padding: 16px 20px 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-            color: #5a7a5a;
-            border-bottom: 2px solid #e2ecd8;
-        }
-        .leaderboard-table td {
-            padding: 14px 20px;
-            font-weight: 500;
-            border-bottom: 1px solid #edf3e8;
-            transition: background 0.2s;
-        }
-        .leaderboard-table tr:last-child td {
-            border-bottom: none;
-        }
-        .leaderboard-table tr:hover td {
-            background: rgba(139, 195, 74, 0.1);
-        }
-        .rank-cell {
-            font-weight: 800;
-            width: 70px;
-            text-align: center;
-        }
-        .rank-medal {
-            font-size: 1.6rem;
-        }
-        .user-cell {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(145deg, #e2ecd8, #cfe2c4);
-            border-radius: 40px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #4a6a3a;
-            font-weight: bold;
-            font-size: 1rem;
-        }
-        .username {
-            font-weight: 600;
-            color: #1e3a1e;
-        }
-        .xp-cell {
-            font-weight: 700;
-            color: #2c5e2e;
-            text-align: right;
-        }
-        .lessons-cell {
-            text-align: center;
-            color: #6a8a5a;
-        }
-        .btn-leaderboard {
-            background: linear-gradient(135deg, #7cb342, #558b2f);
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 12px 24px;
-            border-radius: 40px;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .btn-leaderboard:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(124,179,66,0.5);
-            color: white;
-            background: linear-gradient(135deg, #8bc34a, #6a9c3e);
-        }
-
-        @media (max-width: 992px) {
-            .hero-text-block { max-width: 100%; margin-top: 40px; padding: 24px 28px; margin-left: 20px; }
-            .hero-title { font-size: 2.8rem; }
-            .nav-links { gap: 6px; }
-            .nav-links a { font-size: 0.9rem; }
-            .navbar-brand { font-size: 1.4rem; }
-            .dragon-front { width: 500px; }
-            .dragon-front.small { width: 300px; }
-            .navbar-custom .container-custom { padding-left: 30px; }
-            .content-wrapper { margin-left: 40px; }
-        }
-        @media (max-width: 768px) {
-            .dragon-front { width: 400px; right: -30px; }
-            .dragon-front.small { width: 220px; right: -20px; }
-            .hero-text-block { background: transparent; margin: 30px 0; margin-left: 15px; }
-            .hero-title { font-size: 2rem; }
-            .nav-links { display: none; }
-            .navbar-custom .container-custom { padding: 0 16px; padding-left: 20px; flex-wrap: wrap; }
-            .chat-popup { width: 300px; left: 10px; bottom: 80px; }
-            .content-wrapper { margin-left: 20px; }
-        }
-        @media (max-width: 550px) {
-            .dragon-front { width: 280px; right: -20px; }
-            .dragon-front.small { width: 160px; }
-            .hero-title { font-size: 1.9rem; }
-            .chat-popup { width: 280px; left: 10px; bottom: 70px; }
-            .content-wrapper { margin-left: 10px; }
-            .navbar-custom .container-custom { padding-left: 15px; }
-            .hero-text-block { margin-left: 10px; }
-        }
+        .community-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(4px); border-radius: 28px; padding: 24px; text-align: center; transition: all 0.3s; border: 1px solid rgba(100,140,80,0.2); cursor: pointer; height: 100%; }
+        .community-card:hover { transform: translateY(-6px); border-color: #8aaa7a; background: rgba(255, 255, 255, 0.95); }
+        .community-icon { width: 70px; height: 70px; background: rgba(100, 140, 80, 0.15); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2rem; color: #6a8a5a; }
+        .clans-section { background: rgba(200, 230, 180, 0.2); border-radius: 48px; padding: 40px; margin: 40px 0; border: 1px solid rgba(100,140,80,0.2); }
+        .clan-card { background: rgba(255, 255, 255, 0.6); border-radius: 24px; padding: 20px; transition: 0.3s; cursor: pointer; border: 1px solid rgba(100,140,80,0.2); margin-bottom: 12px; }
+        .clan-card:hover { border-color: #8aaa7a; transform: translateY(-4px); background: rgba(255, 255, 255, 0.8); }
+        .clan-rank { font-size: 1.5rem; font-weight: 800; color: #6a8a5a; }
+        .clan-score { font-size: 1.2rem; font-weight: 700; color: #1a3a1a; }
+        .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; }
+        .achievement-item { background: rgba(255, 255, 255, 0.6); border-radius: 20px; padding: 16px; text-align: center; transition: 0.2s; border: 1px solid rgba(100,140,80,0.2); }
+        .achievement-item.locked { filter: grayscale(0.5); opacity: 0.6; }
+        .achievement-item.unlocked { background: rgba(100, 140, 80, 0.2); border-color: #8aaa7a; }
+        .section-title { font-size: 2.3rem; font-weight: 700; margin-bottom: 16px; color: #1a3a1a; }
+        .section-subtitle { color: #2a4a2a; font-size: 1.1rem; }
+        footer { background: rgba(30, 50, 30, 0.05); color: #2a4a2a; margin-top: 80px; padding: 40px 0 20px; position: relative; z-index: 5; border-top: 1px solid rgba(100,140,80,0.2); }
+        footer a { color: #4a6a3a; text-decoration: none; }
+        .container-custom { max-width: 1280px; margin: 0 auto; padding: 0 24px; position: relative; }
+        .content-wrapper .container-custom { transform: none; }
+        .leaderboard-card { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px); border-radius: 32px; border: 1px solid rgba(100, 140, 80, 0.3); box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; overflow: hidden; }
+        .leaderboard-card:hover { transform: translateY(-5px); box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.2); }
+        .leaderboard-header { background: linear-gradient(135deg, #6a9c3e, #8bc34a); padding: 20px 24px; color: white; border-bottom: 2px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .leaderboard-header h3 { margin: 0; font-weight: 700; font-size: 1.6rem; display: flex; align-items: center; gap: 12px; }
+        .leaderboard-header h3 i { font-size: 1.8rem; color: #ffd966; }
+        .course-selector { background: rgba(255,255,255,0.2); border-radius: 40px; padding: 5px 12px; color: white; border: none; font-weight: 500; }
+        .course-selector option { color: black; }
+        .leaderboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .leaderboard-table th { padding: 16px 20px 12px; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; color: #5a7a5a; border-bottom: 2px solid #e2ecd8; }
+        .leaderboard-table td { padding: 14px 20px; font-weight: 500; border-bottom: 1px solid #edf3e8; transition: background 0.2s; }
+        .leaderboard-table tr:last-child td { border-bottom: none; }
+        .leaderboard-table tr:hover td { background: rgba(139, 195, 74, 0.1); }
+        .rank-cell { font-weight: 800; width: 70px; text-align: center; }
+        .rank-medal { font-size: 1.6rem; }
+        .user-cell { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(145deg, #e2ecd8, #cfe2c4); border-radius: 40px; display: inline-flex; align-items: center; justify-content: center; color: #4a6a3a; font-weight: bold; font-size: 1rem; }
+        .username { font-weight: 600; color: #1e3a1e; }
+        .xp-cell { font-weight: 700; color: #2c5e2e; text-align: right; }
+        .lessons-cell { text-align: center; color: #6a8a5a; }
+        .btn-leaderboard { background: linear-gradient(135deg, #7cb342, #558b2f); border: none; color: white; font-weight: 600; padding: 12px 24px; border-radius: 40px; transition: all 0.3s; display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-size: 0.9rem; }
+        .btn-leaderboard:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(124,179,66,0.5); color: white; background: linear-gradient(135deg, #8bc34a, #6a9c3e); }
+        @media (max-width: 992px) { .hero-text-block { max-width: 100%; margin-top: 40px; padding: 24px 28px; margin-left: 20px; } .hero-title { font-size: 2.8rem; } .nav-links { gap: 6px; } .nav-links a { font-size: 0.9rem; } .navbar-brand { font-size: 1.4rem; } .dragon-front { width: 500px; } .dragon-front.small { width: 300px; } .navbar-custom .container-custom { padding-left: 30px; } .content-wrapper { margin-left: 40px; } }
+        @media (max-width: 768px) { .dragon-front { width: 400px; right: -30px; } .dragon-front.small { width: 220px; right: -20px; } .hero-text-block { background: transparent; margin: 30px 0; margin-left: 15px; } .hero-title { font-size: 2rem; } .nav-links { display: none; } .navbar-custom .container-custom { padding: 0 16px; padding-left: 20px; flex-wrap: wrap; } .chat-popup { width: 300px; left: 10px; bottom: 80px; } .content-wrapper { margin-left: 20px; } }
+        @media (max-width: 550px) { .dragon-front { width: 280px; right: -20px; } .dragon-front.small { width: 160px; } .hero-title { font-size: 1.9rem; } .chat-popup { width: 280px; left: 10px; bottom: 70px; } .content-wrapper { margin-left: 10px; } .navbar-custom .container-custom { padding-left: 15px; } .hero-text-block { margin-left: 10px; } }
     </style>
 </head>
 <body>
 
-<!-- Фоновые слои: кремль справа, ярче, выше -->
+<!-- Фоновые слои -->
 <div class="background-layer">
     <div class="architecture">
         <img src="https://i.imgur.com/wfepIyq.png" alt="Казанский Кремль">
     </div>
 </div>
 
-<!-- Дракон переднего плана (увеличен, сдвинут правее) -->
+<!-- Дракон переднего плана -->
 <img src="https://i.imgur.com/swvWgEt.png" class="dragon-front" id="dinoBtn" alt="Дракон TatarSkill">
 
-<!-- Колокольчик уведомлений (показывается только если пользователь может стать автором) -->
+<!-- Колокольчик уведомлений (если автор) -->
 {% if user.is_authenticated and not user.profile.is_author and user.profile.lessons_completed >= 10 %}
 <div class="notification-bell" id="authorBell" style="position: fixed; bottom: 180px; right: 30px; z-index: 101; cursor: pointer;">
     <div class="bell-icon" style="background: #ff9800; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); animation: ring 1s ease infinite;">
@@ -714,7 +138,7 @@
 </div>
 {% endif %}
 
-<!-- Чат-поп-ап (слева, ниже) -->
+<!-- Чат -->
 <div class="chat-popup" id="chatPopup">
     <div class="chat-header" id="closeChat">
         <span><i class="fas fa-robot me-2"></i> ИИ-репетитор · Татарча</span>
@@ -733,7 +157,7 @@
     </div>
 </div>
 
-<!-- Весь контент (навигация, текст, курсы) -->
+<!-- Основной контент -->
 <div class="main-container">
     <nav class="navbar-custom" id="navbar">
         <div class="container-custom d-flex justify-content-between align-items-center w-100">
@@ -769,7 +193,7 @@
     </nav>
 
     <div class="content-wrapper">
-        <!-- Текстовый блок (прозрачный фон) -->
+        <!-- Текстовый блок -->
         <div class="hero-text-block">
             <div class="hero-badge">✨ AI-репетитор говорит по-татарски</div>
             <h1 class="hero-title">Учись <span>на родном языке</span><br>с интеллектуальным помощником 24/7</h1>
@@ -783,7 +207,7 @@
             </div>
         </div>
 
-        <!-- Курсы -->
+        <!-- Курсы (оставляем как есть) -->
         <section id="courses" class="py-5">
             <div class="text-center mb-4">
                 <h2 class="section-title">Наши курсы</h2>
@@ -859,26 +283,33 @@
             </div>
         </div>
 
-        <!-- Сообщества (слайдер) -->
+        <!-- Динамические сообщества (слайдер) -->
         <div class="communities-section">
             <div class="text-center mb-4">
-                <h2 class="section-title">🌿 Сообщества</h2>
+                <h2 class="section-title">🌿 Сообщества по теме «{{ current_course.title|default:"выбранного курса" }}»</h2>
                 <p class="section-subtitle">Листайте → присоединяйтесь к единомышленникам</p>
             </div>
             <div class="communities-wrapper">
                 <div class="swiper swiper-communities">
                     <div class="swiper-wrapper">
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-utensils"></i></div><h5>Татарская кухня</h5><p>Рецепты, кулинарная лексика</p><span class="badge bg-dark text-white">450 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-laptop-code"></i></div><h5>IT на татарском</h5><p>Программирование и технологии</p><span class="badge bg-dark text-white">890 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-book-open"></i></div><h5>Поэзия и проза</h5><p>Тукай, поэты, литература</p><span class="badge bg-dark text-white">620 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-mosque"></i></div><h5>Куда пойти в Казани</h5><p>Афиша, места, события</p><span class="badge bg-dark text-white">1.2k уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-water"></i></div><h5>Путешествия по РТ</h5><p>Болгар, Свияжск, туризм</p><span class="badge bg-dark text-white">780 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-music"></i></div><h5>Татарская музыка</h5><p>Фольклор, современная музыка</p><span class="badge bg-dark text-white">540 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-landmark"></i></div><h5>Экскурсии и культура</h5><p>История, музеи, традиции</p><span class="badge bg-dark text-white">430 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-newspaper"></i></div><h5>Новости Казани</h5><p>События, анонсы, новости</p><span class="badge bg-dark text-white">2.1k уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-tree"></i></div><h5>Природа Татарстана</h5><p>Экотропы, заповедники</p><span class="badge bg-dark text-white">510 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-museum"></i></div><h5>Музеи Казани</h5><p>Эрмитаж, выставки, искусство</p><span class="badge bg-dark text-white">380 уч.</span></div></div>
-                        <div class="swiper-slide"><div class="community-card"><div class="community-icon"><i class="fas fa-futbol"></i></div><h5>Спорт и активность</h5><p>Футбол, хоккей, активный отдых</p><span class="badge bg-dark text-white">620 уч.</span></div></div>
+                        {% for community in communities %}
+                        <div class="swiper-slide">
+                            <div class="community-card">
+                                <div class="community-icon"><i class="{{ community.icon_class }}"></i></div>
+                                <h5>{{ community.name }}</h5>
+                                <p>{{ community.description }}</p>
+                                <span class="badge bg-dark text-white">{{ community.member_count }} уч.</span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="swiper-slide">
+                            <div class="community-card">
+                                <div class="community-icon"><i class="fas fa-users"></i></div>
+                                <h5>Нет сообществ</h5>
+                                <p>Пока нет сообществ, связанных с этим курсом.</p>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="swiper-button-prev-comm"><i class="fas fa-chevron-left"></i></div>
@@ -889,61 +320,58 @@
             </div>
         </div>
 
-        <!-- Кланы и достижения (современный рейтинг топ-3) -->
+        <!-- Рейтинг курса с переключателем -->
         <div class="clans-section">
             <div class="row g-4">
                 <div class="col-lg-6">
                     <div class="leaderboard-card">
                         <div class="leaderboard-header">
-                            <h3><i class="fas fa-trophy"></i> Рейтинг клана «Татарский язык с нуля»</h3>
+                            <h3><i class="fas fa-trophy"></i> Рейтинг курса</h3>
+                            {% if available_courses %}
+                            <form method="get" id="course-switch-form" class="d-inline">
+                                <select name="course_id" class="course-selector" onchange="this.form.submit()">
+                                    {% for course in available_courses %}
+                                    <option value="{{ course.slug }}" {% if current_course and current_course.id == course.id %}selected{% endif %}>
+                                        {{ course.title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                            {% endif %}
                         </div>
                         <div class="table-responsive">
                             <table class="leaderboard-table">
                                 <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Пользователь</th>
-                                        <th>Уроков</th>
-                                        <th>Опыт</th>
-                                    </tr>
+                                    <tr><th>#</th><th>Пользователь</th><th>Уроков</th><th>Опыт</th></tr>
                                 </thead>
                                 <tbody>
-                                    {% if clan_leaderboard %}
-                                        {% for user_stat in clan_leaderboard|slice:":3" %}
-                                        <tr>
+                                    {% if leaderboard %}
+                                        {% for entry in leaderboard %}
+                                        <tr class="{% if entry.username == request.user.username %}table-success fw-bold{% endif %}">
                                             <td class="rank-cell">
-                                                {% if forloop.counter == 1 %}
-                                                    <span class="rank-medal">🥇</span>
-                                                {% elif forloop.counter == 2 %}
-                                                    <span class="rank-medal">🥈</span>
-                                                {% elif forloop.counter == 3 %}
-                                                    <span class="rank-medal">🥉</span>
-                                                {% else %}
-                                                    {{ forloop.counter }}
-                                                {% endif %}
+                                                {% if entry.rank == 1 %}🥇
+                                                {% elif entry.rank == 2 %}🥈
+                                                {% elif entry.rank == 3 %}🥉
+                                                {% else %}{{ entry.rank }}{% endif %}
                                             </td>
                                             <td>
                                                 <div class="user-cell">
-                                                    <div class="user-avatar">
-                                                        {{ user_stat.username|make_list|first|upper }}
-                                                    </div>
-                                                    <span class="username">{{ user_stat.username }}</span>
+                                                    <div class="user-avatar">{{ entry.username|make_list|first|upper }}</div>
+                                                    <span class="username">{{ entry.username }}</span>
                                                 </div>
                                             </td>
-                                            <td class="lessons-cell">{{ user_stat.lessons_completed }}</td>
-                                            <td class="xp-cell">{{ user_stat.course_xp }}</td>
+                                            <td class="lessons-cell">{{ entry.lessons_completed }}</td>
+                                            <td class="xp-cell">{{ entry.course_xp }}</td>
                                         </tr>
                                         {% endfor %}
                                     {% else %}
-                                        <tr>
-                                            <td colspan="4" class="text-center py-4">Нет участников</td>
-                                        </tr>
+                                        <tr><td colspan="4" class="text-center py-4">Нет участников</td></tr>
                                     {% endif %}
                                 </tbody>
                             </table>
                         </div>
                         <div class="text-center p-4">
-                            <a href="{% url 'clan_leaderboard' %}" class="btn-leaderboard">
+                            <a href="{% url 'clan_leaderboard' %}?course_id={{ current_course.slug }}" class="btn-leaderboard">
                                 Смотреть полный рейтинг <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
@@ -1027,7 +455,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
-    // Инициализация Swiper для сообществ
+    // Инициализация Swiper
     const communitiesSwiper = new Swiper('.swiper-communities', {
         slidesPerView: 'auto',
         spaceBetween: 20,
@@ -1045,77 +473,51 @@
     // Прокрутка для навбара
     const navbar = document.getElementById('navbar');
     window.addEventListener('scroll', () => {
-        if (window.scrollY > 150) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
-        }
+        if (window.scrollY > 150) navbar.classList.add('scrolled');
+        else navbar.classList.remove('scrolled');
     });
 
     // Переключение языка (демо)
     const langRu = document.getElementById('langRu');
     const langTt = document.getElementById('langTt');
-    langRu.addEventListener('click', () => {
-        langRu.classList.add('active');
-        langTt.classList.remove('active');
-        console.log('Выбран русский язык');
-    });
-    langTt.addEventListener('click', () => {
-        langTt.classList.add('active');
-        langRu.classList.remove('active');
-        console.log('Выбран татарский язык');
-    });
+    langRu.addEventListener('click', () => { langRu.classList.add('active'); langTt.classList.remove('active'); });
+    langTt.addEventListener('click', () => { langTt.classList.add('active'); langRu.classList.remove('active'); });
 
-    // Управление размером дракона при скролле
+    // Управление размером дракона
     const dragon = document.querySelector('.dragon-front');
     const coursesSection = document.getElementById('courses');
     if (coursesSection) {
         const adjustDragonSize = () => {
             const scrollY = window.scrollY;
             const coursesTop = coursesSection.offsetTop;
-            if (scrollY + 200 > coursesTop) {
-                dragon.classList.add('small');
-            } else {
-                dragon.classList.remove('small');
-            }
+            if (scrollY + 200 > coursesTop) dragon.classList.add('small');
+            else dragon.classList.remove('small');
         };
         window.addEventListener('scroll', adjustDragonSize);
         adjustDragonSize();
     }
 
-    // Колокольчик уведомлений
+    // Колокольчик
     const bell = document.getElementById('authorBell');
     if (bell) {
         bell.addEventListener('click', function() {
             const textDiv = this.querySelector('.notification-text');
             if (textDiv.style.display === 'none' || textDiv.style.display === '') {
                 textDiv.style.display = 'block';
-                setTimeout(() => {
-                    textDiv.style.display = 'none';
-                }, 5000);
-            } else {
-                textDiv.style.display = 'none';
-            }
+                setTimeout(() => textDiv.style.display = 'none', 5000);
+            } else textDiv.style.display = 'none';
         });
     }
 
-    // AI чат — открывается/закрывается по клику на дракона справа
-    let conversationHistory = [
-        {
-            role: "system",
-            content: "Ты — дружелюбный ИИ-репетитор. Если пользователь пишет на татарском, отвечай на татарском. Если пользователь разговаривает с тобой на русском — отвечай на русском. Если пользователь пишет на русском значит разговаривай только на русском и никакого татарского. Используй приветствия на татарском: 'Исәнмесез!', 'Рәхим итегез!' и т.д. Не используй markdown, только обычный текст."
-        }
-    ];
-
+    // AI чат (оставляем как было)
+    let conversationHistory = [{ role: "system", content: "Ты — дружелюбный ИИ-репетитор. Если пользователь пишет на татарском, отвечай на татарском. Если пользователь разговаривает с тобой на русском — отвечай на русском. Используй приветствия на татарском: 'Исәнмесез!', 'Рәхим итегез!' и т.д. Не используй markdown, только обычный текст." }];
     const chatPopup = document.getElementById('chatPopup');
     const dinoBtn = document.getElementById('dinoBtn');
     const closeChat = document.getElementById('closeChat');
     const chatMessagesDiv = document.getElementById('chatMessages');
     const chatInput = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendChat');
-
     let isTyping = false;
-
     function addMessage(text, isUser = true) {
         const div = document.createElement('div');
         div.className = `d-flex mb-2 ${isUser ? 'justify-content-end' : 'justify-content-start'}`;
@@ -1123,7 +525,6 @@
         chatMessagesDiv.appendChild(div);
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
-
     function showTypingIndicator() {
         const typingDiv = document.createElement('div');
         typingDiv.className = 'd-flex mb-2 justify-content-start typing-container';
@@ -1132,13 +533,7 @@
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
         return typingDiv;
     }
-
-    function removeTypingIndicator(typingDiv) {
-        if (typingDiv && typingDiv.parentNode) {
-            typingDiv.remove();
-        }
-    }
-
+    function removeTypingIndicator(typingDiv) { if (typingDiv && typingDiv.parentNode) typingDiv.remove(); }
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -1153,45 +548,24 @@
         }
         return cookieValue;
     }
-
     async function getMistralResponse(userMessage) {
         try {
-            conversationHistory.push({
-                role: "user",
-                content: userMessage
-            });
+            conversationHistory.push({ role: "user", content: userMessage });
             const response = await fetch('/api/chat/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    message: userMessage,
-                    history: conversationHistory.slice(0, -1)
-                })
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ message: userMessage, history: conversationHistory.slice(0, -1) })
             });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Ошибка сервера');
-            }
+            if (!response.ok) { const error = await response.json(); throw new Error(error.error || 'Ошибка сервера'); }
             const data = await response.json();
             const assistantMessage = data.response;
-            conversationHistory.push({
-                role: "assistant",
-                content: assistantMessage
-            });
+            conversationHistory.push({ role: "assistant", content: assistantMessage });
             return assistantMessage;
-        } catch (error) {
-            console.error('Error:', error);
-            return "Кызганыч, хәзер җавап бирә алмыйм. Зинһар, соңрак яңадан тырышыгыз. 😊\n\n(Извините, сейчас не могу ответить. Пожалуйста, попробуйте позже.)";
-        }
+        } catch (error) { return "Кызганыч, хәзер җавап бирә алмыйм. Зинһар, соңрак яңадан тырышыгыз. 😊\n\n(Извините, сейчас не могу ответить. Пожалуйста, попробуйте позже.)"; }
     }
-
     async function sendMessageToAI() {
         const text = chatInput.value.trim();
-        if (!text) return;
-        if (isTyping) return;
+        if (!text || isTyping) return;
         addMessage(text, true);
         chatInput.value = '';
         const typingDiv = showTypingIndicator();
@@ -1203,38 +577,17 @@
         } catch (error) {
             removeTypingIndicator(typingDiv);
             addMessage("⚠️ Ошибка подключения к AI. Проверьте интернет и попробуйте снова.", false);
-        } finally {
-            isTyping = false;
-        }
+        } finally { isTyping = false; }
     }
-
     sendBtn.addEventListener('click', sendMessageToAI);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessageToAI();
-    });
-
-    dinoBtn.addEventListener('click', () => {
-        if (chatPopup.style.display === 'flex') {
-            chatPopup.style.display = 'none';
-        } else {
-            chatPopup.style.display = 'flex';
-        }
-    });
-    closeChat.addEventListener('click', () => {
-        chatPopup.style.display = 'none';
-    });
-
+    chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessageToAI(); });
+    dinoBtn.addEventListener('click', () => { chatPopup.style.display = chatPopup.style.display === 'flex' ? 'none' : 'flex'; });
+    closeChat.addEventListener('click', () => { chatPopup.style.display = 'none'; });
     document.querySelectorAll('.community-card, .clan-card, .achievement-item').forEach(el => {
         el.addEventListener('click', () => {
-            if (!el.classList.contains('unlocked') && el.classList.contains('achievement-item')) {
-                alert('🔒 Выполните уроки, чтобы открыть это достижение!');
-            } else {
-                if (!{% if user.is_authenticated %}true{% else %}false{% endif %}) {
-                    new bootstrap.Modal(document.getElementById('registerModal')).show();
-                } else {
-                    alert('🌟 Функция скоро появится!');
-                }
-            }
+            if (!el.classList.contains('unlocked') && el.classList.contains('achievement-item')) alert('🔒 Выполните уроки, чтобы открыть это достижение!');
+            else if (!{% if user.is_authenticated %}true{% else %}false{% endif %}) new bootstrap.Modal(document.getElementById('registerModal')).show();
+            else alert('🌟 Функция скоро появится!');
         });
     });
 </script>
