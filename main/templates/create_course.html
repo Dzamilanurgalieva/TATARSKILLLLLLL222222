@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Создать курс{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">Создать новый курс</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn-primary-custom">Создать курс</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

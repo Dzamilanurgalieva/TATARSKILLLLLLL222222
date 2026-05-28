@@ -36,6 +36,16 @@ urlpatterns = [
     path('take-custom-test/<int:test_id>/', views.take_custom_test, name='take_custom_test'),
     path('course-leaderboard/<slug:slug>/', views.course_leaderboard, name='course_leaderboard'),
     path('become-author/', views.become_author, name='become_author'),
+    path('course/<int:course_id>/add-lesson/', views.add_lesson, name='add_lesson'),
+    path('create-course/', views.create_course, name='create_course'),
+    path('course/<int:course_id>/edit/', views.edit_course, name='edit_course'),
+    path('edit-custom-test/<int:test_id>/', views.edit_custom_test, name='edit_custom_test'),
+    path('lesson/<int:lesson_id>/edit/', views.edit_lesson, name='edit_lesson'),
+    path('delete-custom-test/<int:test_id>/', views.delete_custom_test, name='delete_custom_test'),
+    path('delete-course/<int:course_id>/', views.delete_course, name='delete_course'),
+    path('delete-lesson-test/<int:lesson_id>/', views.delete_lesson_test, name='delete_lesson_test'),
+    path('course/<int:course_id>/attach-test/', views.attach_test_to_course, name='attach_test_to_course'),
+    path('course/<slug:slug>/add-review/', views.add_course_review, name='add_course_review'),
     # TTS для озвучки (если будете использовать)
     # path('tts/', views.tts, name='tts'),  # раскомментируйте, когда добавите функцию tts в views.py
 ]

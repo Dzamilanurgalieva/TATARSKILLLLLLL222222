@@ -28,6 +28,8 @@
                         </p>
                         <p>Вопросов: {{ test.questions.count }}</p>
                         <p>Награда: {{ test.reward_coins_per_question }} монет за вопрос</p>
+                        <a href="{% url 'edit_custom_test' test.id %}" class="btn-outline-custom btn-sm mt-2">✏️ Редактировать</a>
+                        <a href="{% url 'delete_custom_test' test.id %}" class="btn-outline-custom btn-sm mt-2" onclick="return confirm('Вы уверены, что хотите удалить тест «{{ test.title }}»? Это действие необратимо.');">🗑️ Удалить</a>
                     </div>
                 </div>
                 {% endfor %}

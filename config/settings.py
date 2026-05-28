@@ -75,3 +75,4 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MISTRAL_API_KEY = "4sthyfFYWWobs8OpK6K7cUaP0unCVbW9"
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"

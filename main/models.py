@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from datetime import timedelta
 
+
 # ---------- Существующие модели (без изменений) ----------
 
 class Course(models.Model):
@@ -39,6 +40,11 @@ class Course(models.Model):
     updated_at = models.DateTimeField('Обновлен', auto_now=True)
     published_at = models.DateTimeField('Опубликован', blank=True, null=True)
     order = models.PositiveIntegerField('Порядок', default=0)
+    is_official = models.BooleanField('Официальный курс', default=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='courses',
+                               verbose_name='Автор курса')
+    additional_tests = models.ManyToManyField('CustomTest', blank=True, related_name='attached_courses',
+                                              verbose_name='Дополнительные тесты')
 
     class Meta:
         verbose_name = 'Курс'
@@ -76,6 +82,8 @@ class Lesson(models.Model):
     content = models.TextField('Содержание урока', blank=True, help_text='HTML формат')
     duration_minutes = models.PositiveIntegerField('Длительность (минут)', default=10)
     is_free_preview = models.BooleanField('Бесплатный просмотр', default=False)
+    test = models.ForeignKey('CustomTest', on_delete=models.SET_NULL, null=True, blank=True, related_name='lessons',
+                             verbose_name='Тест к уроку')
 
     class Meta:
         verbose_name = 'Урок'
@@ -109,7 +117,6 @@ class Achievement(models.Model):
     description = models.CharField('Описание', max_length=200)
     points = models.PositiveIntegerField('Очки', default=10)
     is_active = models.BooleanField('Активно', default=True)
-    # НОВОЕ: привязка к курсу (опционально)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Привязанный курс")
 
     class Meta:
@@ -134,9 +141,11 @@ class Question(models.Model):
     option2 = models.CharField('Вариант 2', max_length=200)
     option3 = models.CharField('Вариант 3', max_length=200, blank=True)
     option4 = models.CharField('Вариант 4', max_length=200, blank=True)
-    correct_option = models.PositiveSmallIntegerField('Номер правильного ответа (1-4)', choices=[(i, str(i)) for i in range(1, 5)])
+    correct_option = models.PositiveSmallIntegerField('Номер правильного ответа (1-4)',
+                                                      choices=[(i, str(i)) for i in range(1, 5)])
     explanation = models.TextField('Пояснение к ответу', blank=True)
-    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='choice', verbose_name='Тип вопроса')
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='choice',
+                                     verbose_name='Тип вопроса')
     audio_url = models.URLField('Ссылка на аудиофайл', blank=True, help_text='Для типа "audio_choice"')
 
     class Meta:
@@ -171,13 +180,12 @@ class LessonCompletion(models.Model):
         return f'{self.user.username} - {self.lesson.title}'
 
 
-# ---------- НОВАЯ МОДЕЛЬ: Запись на курс и прогресс внутри курса ----------
 class CourseEnrollment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_enrollments')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
     enrolled_at = models.DateTimeField(auto_now_add=True)
     lessons_completed = models.PositiveIntegerField(default=0)
-    course_xp = models.PositiveIntegerField(default=0)   # XP, полученные за этот курс
+    course_xp = models.PositiveIntegerField(default=0)
     last_activity = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -187,8 +195,6 @@ class CourseEnrollment(models.Model):
         return f"{self.user.username} – {self.course.title}"
 
 
-# ---------- Модели для лиг, профиля, экономики (без изменений) ----------
-# Таблица границ уровней XP
 LEVEL_XP_BOUNDS = {
     1: (0, 59),
     2: (60, 119),
@@ -215,6 +221,7 @@ LEVEL_XP_BOUNDS = {
     23: (22500, 25999),
     24: (26000, 29999),
 }
+
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -287,8 +294,10 @@ class UserLeagueMembership(models.Model):
     week_start = models.DateField()
     weekly_xp = models.PositiveIntegerField('XP за неделю', default=0)
     rank = models.PositiveIntegerField('Место в лиге', null=True, blank=True)
-    promotion_to = models.ForeignKey(LeagueInstance, on_delete=models.SET_NULL, null=True, blank=True, related_name='promoted_from')
-    relegation_to = models.ForeignKey(LeagueInstance, on_delete=models.SET_NULL, null=True, blank=True, related_name='relegated_from')
+    promotion_to = models.ForeignKey(LeagueInstance, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='promoted_from')
+    relegation_to = models.ForeignKey(LeagueInstance, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='relegated_from')
 
     class Meta:
         unique_together = ['user', 'week_start']
@@ -411,10 +420,41 @@ class DailyRewardLog(models.Model):
 
     class Meta:
         unique_together = ['user', 'date']
+
+
+# ========== ОТЗЫВЫ НА КУРСЫ ==========
+
+class CourseReview(models.Model):
+    """Отзыв на курс"""
+    RATING_CHOICES = [
+        (1, '★☆☆☆☆ (1)'),
+        (2, '★★☆☆☆ (2)'),
+        (3, '★★★☆☆ (3)'),
+        (4, '★★★★☆ (4)'),
+        (5, '★★★★★ (5)'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_reviews', verbose_name='Пользователь')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews', verbose_name='Курс')
+    rating = models.PositiveSmallIntegerField('Оценка', choices=RATING_CHOICES)
+    comment = models.TextField('Текст отзыва', max_length=1000)
+    is_approved = models.BooleanField('Одобрен', default=False)
+    created_at = models.DateTimeField('Дата', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлён', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Отзыв на курс'
+        verbose_name_plural = 'Отзывы на курсы'
+        ordering = ['-created_at']
+        unique_together = ['user', 'course']
+
+    def __str__(self):
+        return f'{self.user.username} — {self.course.title} — {self.rating}★'
+
+
 # ========== НОВЫЕ МОДЕЛИ ДЛЯ ПОЛЬЗОВАТЕЛЬСКИХ ТЕСТОВ ==========
 
 class CustomTest(models.Model):
-    """Пользовательский тест (созданный автором)"""
     STATUS_CHOICES = [
         ('draft', 'Черновик'),
         ('moderation', 'На модерации'),
@@ -431,9 +471,11 @@ class CustomTest(models.Model):
     title = models.CharField(max_length=200, verbose_name='Название теста')
     subject = models.CharField(max_length=100, verbose_name='Предмет', default='Татарский язык')
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='medium', verbose_name='Сложность')
-    course = models.ForeignKey('Course', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Привязанный курс (опционально)')
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True,
+                               verbose_name='Привязанный курс (опционально)')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='Статус')
-    reward_coins_per_question = models.PositiveIntegerField(default=5, verbose_name='Награда (монет) за 1 правильный ответ')
+    reward_coins_per_question = models.PositiveIntegerField(default=5,
+                                                            verbose_name='Награда (монет) за 1 правильный ответ')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -447,14 +489,14 @@ class CustomTest(models.Model):
 
 
 class CustomQuestion(models.Model):
-    """Вопросы для пользовательских тестов"""
     test = models.ForeignKey(CustomTest, on_delete=models.CASCADE, related_name='questions', verbose_name='Тест')
     text = models.TextField(verbose_name='Текст вопроса')
     option1 = models.CharField(max_length=200)
     option2 = models.CharField(max_length=200)
     option3 = models.CharField(max_length=200, blank=True)
     option4 = models.CharField(max_length=200, blank=True)
-    correct_option = models.PositiveSmallIntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4')], verbose_name='Правильный ответ (1-4)')
+    correct_option = models.PositiveSmallIntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4')],
+                                                      verbose_name='Правильный ответ (1-4)')
     explanation = models.TextField(blank=True, verbose_name='Пояснение')
 
     def __str__(self):
@@ -462,7 +504,6 @@ class CustomQuestion(models.Model):
 
 
 class CustomTestResult(models.Model):
-    """Результат прохождения пользовательского теста пользователем"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='custom_test_results')
     test = models.ForeignKey(CustomTest, on_delete=models.CASCADE, related_name='results')
     score = models.PositiveIntegerField(verbose_name='Правильных ответов')

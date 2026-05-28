@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Привязать тест — {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">Привязать тест к курсу «{{ course.title }}»</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Выберите тест</label>
+                <select name="test_id" class="form-select" required>
+                    <option value="">--- Выберите тест ---</option>
+                    {% for test in user_tests %}
+                        <option value="{{ test.id }}">{{ test.title }} ({{ test.get_difficulty_display }}, {{ test.reward_coins_per_question }} монет за вопрос)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-primary-custom">Привязать тест</button>
+            <a href="{% url 'course_detail' course.slug %}" class="btn-outline-custom">Отмена</a>
+        </form>
+
+        {% if not user_tests %}
+            <p class="mt-4 text-muted">У вас нет опубликованных тестов, которые можно привязать. <a href="{% url 'create_test' %}">Создайте тест</a>.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Оставить отзыв — {{ course.title }}{% endblock %}
+
+{% block content %}
+<style>
+    .dragon-rating {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin: 20px 0;
+    }
+    .dragon-option {
+        position: relative;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .dragon-option:hover {
+        transform: scale(1.1);
+    }
+    .dragon-icon {
+        width: 55px;
+        height: 55px;
+        filter: grayscale(1);
+        opacity: 0.5;
+        transition: all 0.2s;
+    }
+    .dragon-icon.active {
+        filter: grayscale(0) brightness(1.1);
+        opacity: 1;
+        animation: bounce 0.3s ease;
+    }
+    .rating-label {
+        font-size: 1.2rem;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 10px;
+        color: #2c5e2e;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+    /* Звёздочка на фоне дракончика */
+    .dragon-option {
+        position: relative;
+    }
+    .dragon-option::before {
+        content: "★";
+        position: absolute;
+        top: -8px;
+        left: 8px;
+        font-size: 20px;
+        color: #ffc107;
+        opacity: 0.7;
+        z-index: 1;
+        pointer-events: none;
+        text-shadow: 0 0 2px rgba(0,0,0,0.3);
+    }
+</style>
+
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">Оставить отзыв о курсе «{{ course.title }}»</h1>
+        <form method="post" id="review-form">
+            {% csrf_token %}
+
+            <!-- Рейтинг дракончиками -->
+            <div class="mb-4 text-center">
+                <div class="rating-label">
+                    <i class="fas fa-star text-warning me-1"></i>
+                    Оцените курс от 1 до 5
+                    <img src="https://i.imgur.com/swvWgEt.png" style="width: 30px; height: 30px; display: inline-block; vertical-align: middle;">
+                    Дракончиков
+                </div>
+                <div class="dragon-rating" id="dragon-rating">
+                    {% for i in "12345" %}
+                    <label class="dragon-option">
+                        <input type="radio" name="rating" value="{{ forloop.counter }}" required>
+                        <img src="https://i.imgur.com/swvWgEt.png" class="dragon-icon" data-value="{{ forloop.counter }}" alt="Дракончик {{ forloop.counter }}">
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Поле для комментария -->
+            <div class="mb-3">
+                <label for="id_comment" class="form-label fw-bold">Ваш отзыв:</label>
+                <textarea name="comment" id="id_comment" rows="4" class="form-control" placeholder="Поделитесь впечатлениями о курсе..." required></textarea>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn-primary-custom">Отправить отзыв</button>
+                <a href="{% url 'course_detail' course.slug %}" class="btn-outline-custom">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const dragonIcons = document.querySelectorAll('.dragon-icon');
+    const ratingInputs = document.querySelectorAll('input[name="rating"]');
+
+    function updateDragonRating(selectedValue) {
+        dragonIcons.forEach((icon, index) => {
+            const dragonValue = parseInt(icon.getAttribute('data-value'));
+            if (dragonValue <= selectedValue) {
+                icon.classList.add('active');
+            } else {
+                icon.classList.remove('active');
+            }
+        });
+    }
+
+    ratingInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            updateDragonRating(parseInt(this.value));
+        });
+    });
+
+    // Проверяем, если уже выбран какой-то вариант при загрузке
+    const checkedInput = document.querySelector('input[name="rating"]:checked');
+    if (checkedInput) {
+        updateDragonRating(parseInt(checkedInput.value));
+    }
+</script>
+{% endblock %}

@@ -1,39 +1,29 @@
 from django.contrib import admin
-from django.utils.html import format_html
 from .models import Course, Lesson, Community, Achievement, Profile, Question, LessonCompletion
-from .models import League, LeagueInstance, UserLeagueMembership, SeasonalEvent, AchievementLevel, AchievementProgress, ShopItem, UserInventory, UserSubscription, DailyRewardLog
-from .models import CustomTest, CustomQuestion, CustomTestResult
-
+from .models import League, LeagueInstance, UserLeagueMembership, SeasonalEvent, AchievementLevel, AchievementProgress, ShopItem, UserInventory, UserSubscription, DailyRewardLog, CustomTest, CustomQuestion, CustomTestResult
+from .models import CourseReview
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'total_points', 'coins', 'tulips', 'level', 'streak_days', 'lessons_completed', 'created_at']
+    list_display = ['user', 'total_points', 'coins', 'tulips', 'level', 'streak_days', 'lessons_completed', 'is_author', 'created_at']
     search_fields = ['user__username', 'user__email']
-    list_editable = ['coins', 'tulips']
+    list_editable = ['coins', 'tulips', 'is_author']
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ['title', 'level', 'price_display', 'status', 'lessons_count', 'order', 'created_at']
-    list_filter = ['status', 'level', 'is_free', 'created_at']
-    search_fields = ['title', 'description']
-    list_editable = ['order', 'status']
+    list_display = ['title', 'author', 'level', 'price', 'is_free', 'status', 'lessons_count', 'is_official', 'created_at']
+    list_filter = ['status', 'level', 'is_free', 'is_official', 'created_at']
+    search_fields = ['title', 'description', 'author__username']
+    list_editable = ['status', 'is_official']
     prepopulated_fields = {'slug': ('title',)}
     fieldsets = (
-        ('Основная информация', {'fields': ('title', 'slug', 'description', 'short_description')}),
+        ('Основная информация', {'fields': ('title', 'slug', 'description', 'short_description', 'author')}),
         ('Детали курса', {'fields': ('level', 'duration_weeks', 'lessons_count')}),
         ('Цена и акции', {'fields': ('price', 'old_price', 'is_free'), 'classes': ('collapse',)}),
         ('Визуальное оформление', {'fields': ('icon_class', 'badge_text', 'badge_color'), 'classes': ('collapse',)}),
-        ('Статус и даты', {'fields': ('status', 'order', 'published_at'), 'classes': ('collapse',)}),
+        ('Статус и даты', {'fields': ('status', 'order', 'published_at', 'is_official'), 'classes': ('collapse',)}),
     )
 
-    def price_display(self, obj):
-        if obj.is_free:
-            return format_html('<span style="color: green;">🔥 Бесплатно</span>')
-        if obj.old_price:
-            return format_html('<span style="text-decoration: line-through;">{} ₽</span> → <b>{} ₽</b>', obj.old_price, obj.price)
-        return f'{obj.price} ₽'
-    price_display.short_description = 'Цена'
-
-    actions = ['make_published', 'make_draft']
+    actions = ['make_published', 'make_draft', 'make_official', 'make_unofficial']
 
     def make_published(self, request, queryset):
         from django.utils import timezone
@@ -44,6 +34,14 @@ class CourseAdmin(admin.ModelAdmin):
         queryset.update(status='draft')
     make_draft.short_description = 'Снять с публикации'
 
+    def make_official(self, request, queryset):
+        queryset.update(is_official=True)
+    make_official.short_description = 'Сделать официальными'
+
+    def make_unofficial(self, request, queryset):
+        queryset.update(is_official=False)
+    make_unofficial.short_description = 'Сделать народными'
+
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
@@ -51,34 +49,22 @@ class LessonAdmin(admin.ModelAdmin):
     list_filter = ['course', 'section', 'is_free_preview']
     search_fields = ['title', 'content']
     list_editable = ['order', 'duration_minutes']
-    fieldsets = (
-        ('Информация об уроке', {'fields': ('course', 'title', 'section', 'order', 'duration_minutes')}),
-        ('Контент', {'fields': ('video_url', 'content', 'is_free_preview')}),
-    )
 
 
 @admin.register(Community)
 class CommunityAdmin(admin.ModelAdmin):
-    list_display = ['name', 'member_count', 'is_active', 'order', 'icon_preview']
+    list_display = ['name', 'member_count', 'is_active', 'order']
     list_filter = ['is_active']
     search_fields = ['name', 'description']
     list_editable = ['order', 'member_count', 'is_active']
 
-    def icon_preview(self, obj):
-        return format_html('<i class="{}"></i>', obj.icon_class)
-    icon_preview.short_description = 'Иконка'
-
 
 @admin.register(Achievement)
 class AchievementAdmin(admin.ModelAdmin):
-    list_display = ['name', 'points', 'is_active', 'icon_preview']
+    list_display = ['name', 'points', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name', 'description']
     list_editable = ['points', 'is_active']
-
-    def icon_preview(self, obj):
-        return format_html('<i class="{}"></i>', obj.icon_class)
-    icon_preview.short_description = 'Иконка'
 
 
 @admin.register(Question)
@@ -144,6 +130,7 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
 class DailyRewardLogAdmin(admin.ModelAdmin):
     list_display = ['user', 'date', 'claimed', 'streak_bonus']
 
+
 @admin.register(CustomTest)
 class CustomTestAdmin(admin.ModelAdmin):
     list_display = ['title', 'author', 'status', 'difficulty', 'created_at']
@@ -151,11 +138,21 @@ class CustomTestAdmin(admin.ModelAdmin):
     search_fields = ['title', 'author__username']
     list_editable = ['status']
 
+
 @admin.register(CustomQuestion)
 class CustomQuestionAdmin(admin.ModelAdmin):
     list_display = ['test', 'text', 'correct_option']
+
 
 @admin.register(CustomTestResult)
 class CustomTestResultAdmin(admin.ModelAdmin):
     list_display = ['user', 'test', 'score', 'earned_coins', 'completed_at']
     list_filter = ['test', 'user']
+
+@admin.register(CourseReview)
+class CourseReviewAdmin(admin.ModelAdmin):
+    list_display = ['user', 'course', 'rating', 'is_approved', 'created_at']
+    list_filter = ['is_approved', 'course', 'rating']
+    search_fields = ['user__username', 'course__title', 'comment']
+    list_editable = ['is_approved']
+    list_display_links = ['user']

@@ -155,7 +155,7 @@
     font-style: italic;
   }
 
-  /* Видео */
+  /* Видео и альтернативная кнопка */
   .video-wrapper {
     margin: 32px 0;
     border-radius: 24px;
@@ -166,6 +166,24 @@
     width: 100%;
     aspect-ratio: 16 / 9;
     border: none;
+  }
+  .btn-youtube-alt {
+    background: #ff0000;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 40px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: var(--transition);
+    margin-top: 8px;
+  }
+  .btn-youtube-alt:hover {
+    background: #cc0000;
+    transform: translateY(-2px);
+    color: white;
   }
 
   /* Прогресс прохождения */
@@ -319,10 +337,20 @@
 
       <div class="lesson-content">
         {{ lesson.content|safe }}
+
         {% if lesson.video_url %}
+        <!-- Блок видео с альтернативной кнопкой -->
+        <div class="mt-4">
           <div class="video-wrapper">
             <iframe src="{{ lesson.video_url }}" allowfullscreen></iframe>
           </div>
+          <div class="text-center mt-3">
+            <p class="small text-muted mb-2">Если видео не загружается, нажмите на кнопку ниже:</p>
+            <a href="{{ lesson.video_url }}" target="_blank" class="btn-youtube-alt" rel="noopener noreferrer">
+              <i class="fab fa-youtube me-2"></i> Смотреть видео на YouTube
+            </a>
+          </div>
+        </div>
         {% endif %}
       </div>
 
@@ -347,7 +375,6 @@
         </div>
         <div>
           {% if has_test %}
-            <!-- Кнопка теста всегда активна, даже если урок уже пройден -->
             <a href="{% url 'take_test' lesson.id %}" class="btn-test">
               Пройти тест <i class="fas fa-arrow-right"></i>
             </a>
@@ -356,6 +383,14 @@
           {% endif %}
         </div>
       </div>
+
+      <!-- Кнопка редактирования урока (только для автора) -->
+        {% if user.is_authenticated and lesson.course.author == user %}
+      <div class="text-center pb-4">
+        <a href="{% url 'edit_lesson' lesson.id %}" class="btn-outline-custom">✏️ Редактировать урок</a>
+        <a href="{% url 'delete_lesson_test' lesson.id %}" class="btn-outline-custom ms-2" onclick="return confirm('Вы уверены, что хотите удалить тест этого урока? Все вопросы будут удалены.');">🗑️ Удалить тест</a>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

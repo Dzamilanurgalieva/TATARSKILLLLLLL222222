@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавить урок — {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">Добавить урок в «{{ course.title }}»</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+
+            <h3 class="mt-4">Выберите тест к уроку</h3>
+            <select name="test" class="form-select mb-3">
+                <option value="">--- Без теста ---</option>
+                {% for test in user_tests %}
+                    <option value="{{ test.id }}">{{ test.title }}</option>
+                {% endfor %}
+            </select>
+            <h3 class="mt-5">Вопросы к уроку (мини-тест из 5 вопросов)</h3>
+            <div id="questions-container">
+                {% for i in "12345" %}
+                <div class="question-item card mb-3 p-3">
+                    <h4>Вопрос {{ forloop.counter }}</h4>
+                    <input type="text" name="question_{{ forloop.counter0 }}_text" class="form-control mb-2" placeholder="Текст вопроса">
+                    <input type="text" name="question_{{ forloop.counter0 }}_option1" class="form-control mb-2" placeholder="Вариант 1">
+                    <input type="text" name="question_{{ forloop.counter0 }}_option2" class="form-control mb-2" placeholder="Вариант 2">
+                    <input type="text" name="question_{{ forloop.counter0 }}_option3" class="form-control mb-2" placeholder="Вариант 3">
+                    <input type="text" name="question_{{ forloop.counter0 }}_option4" class="form-control mb-2" placeholder="Вариант 4">
+                    <select name="question_{{ forloop.counter0 }}_correct_option" class="form-select mb-2">
+                        <option value="1">Правильный ответ: 1</option>
+                        <option value="2">Правильный ответ: 2</option>
+                        <option value="3">Правильный ответ: 3</option>
+                        <option value="4">Правильный ответ: 4</option>
+                    </select>
+                    <textarea name="question_{{ forloop.counter0 }}_explanation" class="form-control" placeholder="Пояснение (необязательно)"></textarea>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn-primary-custom">Добавить урок</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

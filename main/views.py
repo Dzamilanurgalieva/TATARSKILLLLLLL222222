@@ -1,3 +1,5 @@
+from django.db import models
+from .forms import CourseForm, LessonForm
 from django.contrib.auth.decorators import user_passes_test
 from .models import CustomTest, CustomQuestion, CustomTestResult
 from django import forms
@@ -18,7 +20,7 @@ from .models import (
     Course, Community, Achievement, Lesson, Question, LessonCompletion, Profile,
     League, LeagueInstance, UserLeagueMembership, SeasonalEvent, AchievementLevel,
     AchievementProgress, ShopItem, UserInventory, UserSubscription, DailyRewardLog,
-    LEVEL_XP_BOUNDS, CourseEnrollment
+    LEVEL_XP_BOUNDS, CourseEnrollment, CourseReview
 )
 
 mistral_service = MistralService()
@@ -155,7 +157,8 @@ def course_detail(request, slug):
     completed_lessons = set()
     if request.user.is_authenticated:
         completed_lessons = set(
-            LessonCompletion.objects.filter(user=request.user, lesson__course=course).values_list('lesson_id', flat=True))
+            LessonCompletion.objects.filter(user=request.user, lesson__course=course).values_list('lesson_id',
+                                                                                                  flat=True))
     unlocked_lessons = set()
     if request.user.is_authenticated:
         unlocked_lessons.update(completed_lessons)
@@ -176,12 +179,19 @@ def course_detail(request, slug):
     total_lessons = course.lessons_count
     completed_count = len(completed_lessons)
     progress_percent = (completed_count / total_lessons) * 100 if total_lessons > 0 else 0
+
+    # === СРЕДНЯЯ ОЦЕНКА ===
+    from django.db.models import Avg
+    avg_rating = course.reviews.filter(is_approved=True).aggregate(Avg('rating'))['rating__avg'] or 0
+    avg_rating = round(avg_rating, 1)
+
     context = {
         'course': course,
         'lessons': lessons,
         'completed_lessons': completed_lessons,
         'unlocked_lessons': unlocked_lessons,
         'progress_percent': round(progress_percent, 1),
+        'avg_rating': avg_rating,  # <-- добавили
     }
     return render(request, 'course_detail.html', context)
 
@@ -611,3 +621,275 @@ def take_custom_test(request, test_id):
         return redirect('public_tests')
 
     return render(request, 'take_custom_test.html', {'test': test, 'questions': questions})
+@login_required
+def create_course(request):
+    profile = request.user.profile
+    if not profile.is_author:
+        messages.error(request, 'Только авторы могут создавать курсы.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = CourseForm(request.POST)
+        if form.is_valid():
+            course = form.save(commit=False)
+            course.is_official = False
+            course.status = 'draft'
+            course.author = request.user
+            course.save()
+            messages.success(request, f'Курс "{course.title}" создан и отправлен на модерацию!')
+            return redirect('home')
+    else:
+        form = CourseForm()
+
+    return render(request, 'create_course.html', {'form': form})
+
+
+@login_required
+def edit_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    # Проверяем, что пользователь — автор курса или админ
+    if course.author != request.user and not request.user.is_superuser:
+        messages.error(request, 'Вы не можете редактировать этот курс.')
+        return redirect('course_detail', slug=course.slug)
+
+    if request.method == 'POST':
+        form = CourseForm(request.POST, instance=course)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Курс успешно обновлён!')
+            return redirect('course_detail', slug=course.slug)
+    else:
+        form = CourseForm(instance=course)
+
+    return render(request, 'edit_course.html', {'form': form, 'course': course})
+
+
+@login_required
+def add_lesson(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if not request.user.profile.is_author or course.author != request.user:
+        messages.error(request, 'Вы не можете добавлять уроки в этот курс.')
+        return redirect('home')
+
+    user_tests = CustomTest.objects.filter(author=request.user, status='approved')
+
+    if request.method == 'POST':
+        form = LessonForm(request.POST)
+        if form.is_valid():
+            lesson = form.save(commit=False)
+            lesson.course = course
+            last_order = Lesson.objects.filter(course=course).aggregate(models.Max('order'))['order__max'] or 0
+            lesson.order = last_order + 1
+
+            test_id = request.POST.get('test')
+            if test_id:
+                lesson.test_id = test_id
+
+            lesson.save()
+            # Сохраняем 5 вопросов мини-теста
+            for i in range(5):
+                text = request.POST.get(f'question_{i}_text')
+                if text:
+                    option1 = request.POST.get(f'question_{i}_option1', '')
+                    option2 = request.POST.get(f'question_{i}_option2', '')
+                    option3 = request.POST.get(f'question_{i}_option3', '')
+                    option4 = request.POST.get(f'question_{i}_option4', '')
+                    correct = int(request.POST.get(f'question_{i}_correct_option', 1))
+                    explanation = request.POST.get(f'question_{i}_explanation', '')
+
+                    from main.models import Question
+                    Question.objects.create(
+                        lesson=lesson,
+                        text=text,
+                        option1=option1,
+                        option2=option2,
+                        option3=option3,
+                        option4=option4,
+                        correct_option=correct,
+                        explanation=explanation
+                    )
+            messages.success(request, f'Урок "{lesson.title}" добавлен!')
+            return redirect('course_detail', slug=course.slug)
+    else:
+        form = LessonForm()
+
+    return render(request, 'add_lesson.html', {
+        'form': form,
+        'course': course,
+        'user_tests': user_tests
+
+
+    })
+
+
+@login_required
+def edit_custom_test(request, test_id):
+    test = get_object_or_404(CustomTest, id=test_id)
+
+    if test.author != request.user and not request.user.is_superuser:
+        messages.error(request, 'Вы не можете редактировать этот тест.')
+        return redirect('my_tests')
+
+    if request.method == 'POST':
+        form = CustomTestForm(request.POST, instance=test)
+        if form.is_valid():
+            form.save()
+
+            # Удаляем старые вопросы
+            test.questions.all().delete()
+
+            # Добавляем новые вопросы
+            question_index = 0
+            while True:
+                text = request.POST.get(f'question_{question_index}_text')
+                if not text:
+                    break
+                option1 = request.POST.get(f'question_{question_index}_option1')
+                option2 = request.POST.get(f'question_{question_index}_option2')
+                option3 = request.POST.get(f'question_{question_index}_option3', '')
+                option4 = request.POST.get(f'question_{question_index}_option4', '')
+                correct_option = int(request.POST.get(f'question_{question_index}_correct_option'))
+                explanation = request.POST.get(f'question_{question_index}_explanation', '')
+
+                CustomQuestion.objects.create(
+                    test=test,
+                    text=text,
+                    option1=option1,
+                    option2=option2,
+                    option3=option3,
+                    option4=option4,
+                    correct_option=correct_option,
+                    explanation=explanation
+                )
+                question_index += 1
+
+            messages.success(request, f'Тест "{test.title}" успешно обновлён!')
+            return redirect('my_tests')
+    else:
+        form = CustomTestForm(instance=test)
+
+    return render(request, 'edit_custom_test.html', {'form': form, 'test': test})
+
+
+@login_required
+def edit_lesson(request, lesson_id):
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    course = lesson.course
+
+    if course.author != request.user and not request.user.is_superuser:
+        messages.error(request, 'Вы не можете редактировать этот урок.')
+        return redirect('lesson_detail', course_slug=course.slug, order=lesson.order)
+
+    if request.method == 'POST':
+        form = LessonForm(request.POST, instance=lesson)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Урок "{lesson.title}" успешно обновлён!')
+            return redirect('lesson_detail', course_slug=course.slug, order=lesson.order)
+    else:
+        form = LessonForm(instance=lesson)
+
+    return render(request, 'edit_lesson.html', {'form': form, 'lesson': lesson})
+
+
+@login_required
+def delete_custom_test(request, test_id):
+    test = get_object_or_404(CustomTest, id=test_id)
+
+    if test.author != request.user and not request.user.is_superuser:
+        messages.error(request, 'Вы не можете удалить этот тест.')
+        return redirect('my_tests')
+
+    test_title = test.title
+    test.delete()
+    messages.success(request, f'Тест "{test_title}" успешно удалён!')
+    return redirect('my_tests')
+
+
+@login_required
+def delete_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if course.author != request.user and not request.user.is_superuser:
+        messages.error(request, 'Вы не можете удалить этот курс.')
+        return redirect('course_detail', slug=course.slug)
+
+    course_title = course.title
+    course.delete()
+    messages.success(request, f'Курс "{course_title}" успешно удалён!')
+    return redirect('home')
+
+
+@login_required
+def delete_lesson_test(request, lesson_id):
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    course = lesson.course
+
+    if course.author != request.user and not request.user.is_superuser:
+        messages.error(request, 'Вы не можете удалить тест этого урока.')
+        return redirect('lesson_detail', course_slug=course.slug, order=lesson.order)
+
+    lesson.questions.all().delete()
+    messages.success(request, f'Тест урока "{lesson.title}" успешно удалён!')
+    return redirect('lesson_detail', course_slug=course.slug, order=lesson.order)
+
+
+@login_required
+def attach_test_to_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if course.author != request.user and not request.user.is_superuser:
+        messages.error(request, 'Вы не можете изменять тесты этого курса.')
+        return redirect('course_detail', slug=course.slug)
+
+    # Получаем все опубликованные тесты автора (которые ещё не привязаны к этому курсу)
+    user_tests = CustomTest.objects.filter(author=request.user, status='approved').exclude(attached_courses=course)
+
+    if request.method == 'POST':
+        test_id = request.POST.get('test_id')
+        if test_id:
+            test = get_object_or_404(CustomTest, id=test_id)
+            course.additional_tests.add(test)
+            messages.success(request, f'Тест "{test.title}" привязан к курсу!')
+        return redirect('course_detail', slug=course.slug)
+
+    return render(request, 'attach_test_to_course.html', {'course': course, 'user_tests': user_tests})
+
+
+@login_required
+def add_course_review(request, slug):
+    course = get_object_or_404(Course, slug=slug, status='published')
+
+    # Проверяем, записан ли пользователь на курс (прошёл хотя бы один урок)
+    has_completed = CourseEnrollment.objects.filter(user=request.user, course=course).exists()
+    if not has_completed:
+        messages.error(request, 'Вы можете оставить отзыв только после изучения курса.')
+        return redirect('course_detail', slug=course.slug)
+
+    # Проверяем, не оставлял ли пользователь уже отзыв
+    existing_review = CourseReview.objects.filter(user=request.user, course=course).first()
+    if existing_review:
+        messages.error(request, 'Вы уже оставили отзыв на этот курс.')
+        return redirect('course_detail', slug=course.slug)
+
+    if request.method == 'POST':
+        rating = request.POST.get('rating')
+        comment = request.POST.get('comment')
+
+        if not rating or not comment:
+            messages.error(request, 'Пожалуйста, заполните все поля.')
+            return redirect('add_course_review', slug=course.slug)
+
+        review = CourseReview.objects.create(
+            user=request.user,
+            course=course,
+            rating=int(rating),
+            comment=comment,
+            is_approved=True
+        )
+        messages.success(request, 'Спасибо за отзыв! Он появится после проверки модератором.')
+        return redirect('course_detail', slug=course.slug)
+
+    return render(request, 'add_course_review.html', {'course': course})

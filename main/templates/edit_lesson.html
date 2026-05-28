@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактировать урок — {{ lesson.title }}{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">Редактировать урок «{{ lesson.title }}»</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="mt-4">
+                <button type="submit" class="btn-primary-custom">Сохранить изменения</button>
+                <a href="{% url 'lesson_detail' lesson.course.slug lesson.order %}" class="btn-outline-custom">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
