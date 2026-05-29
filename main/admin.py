@@ -29,15 +29,16 @@ class CommunityPostInline(admin.TabularInline):
 
 @admin.register(Community)
 class CommunityAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'owner', 'member_count', 'is_active', 'order', 'created_at']
-    list_filter = ['is_active', 'is_private', 'created_at']
+    list_display = ['name', 'slug', 'owner', 'member_count', 'is_active', 'has_chat', 'order', 'created_at']
+    list_filter = ['is_active', 'is_private', 'has_chat', 'created_at']
     search_fields = ['name', 'description', 'owner__username']
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ['is_active', 'order']
+    list_editable = ['is_active', 'order', 'has_chat']
     inlines = [CommunityMembershipInline, CommunityExternalLinkInline, CommunityPostInline]
     fieldsets = (
         ('Основное', {'fields': ('name', 'slug', 'description', 'icon_class', 'cover_image')}),
         ('Доступ', {'fields': ('is_active', 'is_private', 'join_password', 'owner')}),
+        ('Чат', {'fields': ('has_chat',)}),
         ('Дополнительно', {'fields': ('rules', 'tags', 'order', 'member_count', 'courses')}),
     )
     filter_horizontal = ['courses']
@@ -71,7 +72,7 @@ class CommunityExternalLinkAdmin(admin.ModelAdmin):
     search_fields = ['community__name', 'url']
 
 
-# ---- Остальные админки (существующие) ----
+# ---- Остальные админки ----
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'total_points', 'coins', 'tulips', 'level', 'streak_days', 'lessons_completed', 'is_author', 'created_at']

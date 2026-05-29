@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Чат сообщества «{{ community.name }}»{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-4">
+        <h1 class="section-title">Чат сообщества «{{ community.name }}»</h1>
+        <div id="chat-messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+            {% for msg in messages %}
+                <div><strong>{{ msg.user.username }}</strong> <span style="font-size: 0.8rem;">{{ msg.timestamp|date:"H:i:s" }}</span><br>{{ msg.message }}</div>
+                <hr>
+            {% endfor %}
+        </div>
+        <input type="text" id="chat-message-input" class="form-control" placeholder="Ваше сообщение...">
+        <button id="chat-message-submit" class="btn-primary-custom mt-2">Отправить</button>
+    </div>
+</div>
+
+<script>
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/{{ room_name }}/'
+    );
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const messagesDiv = document.getElementById('chat-messages');
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = `<strong>${data.username}</strong> <span style="font-size:0.8rem;">${data.timestamp}</span><br>${data.message}<hr>`;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    document.querySelector('#chat-message-input').focus();
+    document.querySelector('#chat-message-input').onkeyup = function(e) {
+        if (e.key === 'Enter') {
+            document.querySelector('#chat-message-submit').click();
+        }
+    };
+
+    document.querySelector('#chat-message-submit').onclick = function(e) {
+        const messageInputDom = document.querySelector('#chat-message-input');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'message': message,
+            'timestamp': new Date().toLocaleTimeString(),
+        }));
+        messageInputDom.value = '';
+    };
+</script>
+{% endblock %}

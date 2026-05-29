@@ -23,8 +23,7 @@ class CourseReviewForm(forms.ModelForm):
             'comment': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Поделитесь впечатлениями о курсе...'}),
         }
 
-# ---------- НОВЫЕ ФОРМЫ ДЛЯ СООБЩЕСТВ ----------
-
+# ---------- Формы для сообществ ----------
 class CommunityForm(forms.ModelForm):
     class Meta:
         model = Community

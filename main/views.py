@@ -1,5 +1,5 @@
 from django.db import models
-from .forms import CourseForm, LessonForm
+from .forms import CourseForm, LessonForm, CommunityForm, CommunityPostForm, CommunityCommentForm, CommunityExternalLinkForm
 from django.contrib.auth.decorators import user_passes_test
 from .models import CustomTest, CustomQuestion, CustomTestResult
 from django import forms
@@ -18,6 +18,7 @@ import json
 from .services.mistral_service import MistralService
 from .models import (
     Course, Community, CommunityMembership, CommunityPost, CommunityComment, CommunityExternalLink,
+    CommunityChatRoom, ChatMessage,   # ДОБАВЛЕНО
     Achievement, Lesson, Question, LessonCompletion, Profile,
     League, LeagueInstance, UserLeagueMembership, SeasonalEvent, AchievementLevel,
     AchievementProgress, ShopItem, UserInventory, UserSubscription, DailyRewardLog,
@@ -211,8 +212,8 @@ def course_detail(request, slug):
     completed_lessons = set()
     if request.user.is_authenticated:
         completed_lessons = set(
-            LessonCompletion.objects.filter(user=request.user, lesson__course=course).values_list('lesson_id',
-                                                                                                  flat=True))
+            LessonCompletion.objects.filter(user=request.user, lesson__course=course).values_list('lesson_id', flat=True)
+        )
     unlocked_lessons = set()
     if request.user.is_authenticated:
         unlocked_lessons.update(completed_lessons)
@@ -1211,3 +1212,22 @@ def community_search(request):
     if query:
         communities = communities.filter(Q(name__icontains=query) | Q(description__icontains=query) | Q(tags__icontains=query))
     return render(request, 'main/community_search_results.html', {'communities': communities, 'query': query})
+
+
+@login_required
+def community_chat(request, slug):
+    community = get_object_or_404(Community, slug=slug, is_active=True, has_chat=True)
+    membership = CommunityMembership.objects.filter(community=community, user=request.user).first()
+    if not membership and not request.user.is_superuser:
+        messages.error(request, 'Вы должны состоять в сообществе, чтобы пользоваться чатом.')
+        return redirect('community_detail', slug=slug)
+
+    room, created = CommunityChatRoom.objects.get_or_create(community=community)
+    messages = room.messages.all().select_related('user')[:50]
+
+    context = {
+        'community': community,
+        'messages': messages,
+        'room_name': community.slug,
+    }
+    return render(request, 'main/community_chat.html', context)

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Поиск сообществ{% endblock %}
+
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <h1 class="section-title">Результаты поиска: «{{ query }}»</h1>
+    <div class="row g-4">
+        {% for community in communities %}
+        <div class="col-md-4 col-sm-6">
+            <div class="community-card text-center p-4">
+                <div class="community-icon mx-auto"><i class="{{ community.icon_class }} fa-2x"></i></div>
+                <h5>{{ community.name }}</h5>
+                <p>{{ community.description|truncatewords:15 }}</p>
+                <a href="{% url 'community_detail' community.slug %}" class="btn-outline-custom">Перейти</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12"><p>Ничего не найдено.</p></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

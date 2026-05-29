@@ -9,13 +9,11 @@ from datetime import timedelta
 # ---------- Существующие модели ----------
 
 class Course(models.Model):
-    """Модель для курсов"""
     LEVEL_CHOICES = [
         ('beginner', 'Начинающий'),
         ('intermediate', 'Средний'),
         ('advanced', 'Продвинутый'),
     ]
-
     STATUS_CHOICES = [
         ('draft', 'Черновик'),
         ('published', 'Опубликован'),
@@ -95,7 +93,6 @@ class Lesson(models.Model):
 
 
 class Community(models.Model):
-    """Модель сообщества (расширенная)"""
     name = models.CharField('Название сообщества', max_length=100)
     slug = models.SlugField('URL-идентификатор', max_length=100, unique=True, blank=True)
     icon_class = models.CharField('Иконка (Font Awesome)', max_length=50, default='fas fa-users')
@@ -104,8 +101,6 @@ class Community(models.Model):
     is_active = models.BooleanField('Активно', default=True)
     order = models.PositiveIntegerField('Порядок', default=0)
     courses = models.ManyToManyField(Course, related_name='communities', blank=True, verbose_name='Связанные курсы')
-
-    # НОВЫЕ ПОЛЯ ДЛЯ СООБЩЕСТВ
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_communities',
                               verbose_name='Создатель')
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
@@ -114,6 +109,7 @@ class Community(models.Model):
     rules = models.TextField('Правила сообщества', blank=True)
     cover_image = models.URLField('Ссылка на обложку', blank=True)
     tags = models.CharField('Теги (через запятую)', max_length=200, blank=True)
+    has_chat = models.BooleanField('Чат реального времени', default=False)
 
     class Meta:
         verbose_name = 'Сообщество'
@@ -130,7 +126,6 @@ class Community(models.Model):
         super().save(*args, **kwargs)
 
     def user_can_manage(self, user):
-        """Проверка, может ли пользователь управлять сообществом (владелец или модератор)"""
         if not user.is_authenticated:
             return False
         if user == self.owner or user.is_superuser:
@@ -139,7 +134,6 @@ class Community(models.Model):
 
 
 class CommunityMembership(models.Model):
-    """Участники сообщества с ролями"""
     ROLE_CHOICES = [
         ('member', 'Участник'),
         ('moderator', 'Модератор'),
@@ -156,7 +150,6 @@ class CommunityMembership(models.Model):
 
 
 class CommunityPost(models.Model):
-    """Пост в сообществе"""
     community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='posts')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_posts')
     title = models.CharField('Заголовок', max_length=200)
@@ -175,7 +168,6 @@ class CommunityPost(models.Model):
 
 
 class CommunityComment(models.Model):
-    """Комментарий к посту"""
     post = models.ForeignKey(CommunityPost, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_comments')
     content = models.TextField('Текст комментария')
@@ -188,7 +180,6 @@ class CommunityComment(models.Model):
 
 
 class CommunityExternalLink(models.Model):
-    """Внешние ссылки сообщества (ВК, RUTUBE и др.)"""
     LINK_TYPES = [
         ('vkontakte', 'ВКонтакте (группа/паблик)'),
         ('vkontakte_video', 'ВКонтакте видео'),
@@ -213,6 +204,27 @@ class CommunityExternalLink(models.Model):
         return f'{self.community.name} - {self.get_link_type_display()}'
 
 
+# ---------- Модели чата ----------
+class CommunityChatRoom(models.Model):
+    community = models.OneToOneField(Community, on_delete=models.CASCADE, related_name='chat_room')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'Чат сообщества {self.community.name}'
+
+
+class ChatMessage(models.Model):
+    room = models.ForeignKey(CommunityChatRoom, on_delete=models.CASCADE, related_name='messages')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+
+
+# ---------- Остальные модели (Achievement, Question и т.д.) ----------
 class Achievement(models.Model):
     name = models.CharField('Название достижения', max_length=100)
     icon_class = models.CharField('Иконка (Font Awesome)', max_length=50, default='fas fa-medal')
@@ -527,7 +539,6 @@ class DailyRewardLog(models.Model):
 
 
 class CourseReview(models.Model):
-    """Отзыв на курс"""
     RATING_CHOICES = [
         (1, '★☆☆☆☆ (1)'),
         (2, '★★☆☆☆ (2)'),
