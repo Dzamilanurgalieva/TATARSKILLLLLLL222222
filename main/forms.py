@@ -1,19 +1,23 @@
 from django import forms
 from .models import Course, Lesson, Community, CommunityPost, CommunityComment, CommunityExternalLink, CourseReview
 
+
 class CourseForm(forms.ModelForm):
     class Meta:
         model = Course
         fields = ['title', 'description', 'short_description', 'level', 'price', 'is_free', 'icon_class',
                   'duration_weeks', 'lessons_count']
 
+
 class LessonForm(forms.ModelForm):
     class Meta:
         model = Lesson
         fields = ['title', 'section', 'content', 'video_url', 'duration_minutes', 'is_free_preview', 'test']
 
+
 class DragonRatingWidget(forms.RadioSelect):
     template_name = 'dragon_rating_widget.html'
+
 
 class CourseReviewForm(forms.ModelForm):
     class Meta:
@@ -23,7 +27,7 @@ class CourseReviewForm(forms.ModelForm):
             'comment': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Поделитесь впечатлениями о курсе...'}),
         }
 
-# ---------- Формы для сообществ ----------
+
 class CommunityForm(forms.ModelForm):
     class Meta:
         model = Community

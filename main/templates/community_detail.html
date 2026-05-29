@@ -6,7 +6,6 @@
 {% block content %}
 <div class="container-custom py-5" style="margin-top: 100px;">
     <div class="row">
-        <!-- Левая колонка: посты -->
         <div class="col-lg-8">
             <div class="card-glass p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-start">
@@ -31,14 +30,12 @@
                 {% endif %}
             </div>
 
-            <!-- Кнопка добавления поста -->
             {% if membership and not membership.is_banned %}
                 <div class="mb-4">
                     <a href="{% url 'community_add_post' community.slug %}" class="btn-primary-custom">✏️ Создать пост</a>
                 </div>
             {% endif %}
 
-            <!-- Лента постов -->
             {% for post in posts %}
                 <div class="card-glass p-4 mb-4" id="post-{{ post.id }}">
                     <div class="d-flex justify-content-between align-items-start">
@@ -51,9 +48,7 @@
                             </small>
                         </div>
                         <div>
-                            <a href="{% url 'community_like_post' post.id %}" class="btn btn-sm btn-outline-danger">
-                                ❤️ {{ post.likes.count }}
-                            </a>
+                            <a href="{% url 'community_like_post' post.id %}" class="btn btn-sm btn-outline-danger">❤️ {{ post.likes.count }}</a>
                             {% if request.user == post.author or community.user_can_manage %}
                                 <a href="{% url 'community_edit_post' post.id %}" class="btn btn-sm btn-outline-secondary">✏️</a>
                                 <a href="{% url 'community_delete_post' post.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить пост?')">🗑️</a>
@@ -91,9 +86,7 @@
             {% endfor %}
         </div>
 
-        <!-- Правая колонка: информация и ссылки -->
         <div class="col-lg-4">
-            <!-- Блок чата (добавлен) -->
             {% if community.has_chat %}
                 <div class="card-glass p-3 mb-4 text-center">
                     <i class="fas fa-comments fa-2x mb-2"></i>
@@ -103,28 +96,21 @@
                 </div>
             {% endif %}
 
-            <!-- Внешние ссылки -->
             {% if external_links %}
                 <div class="card-glass p-3 mb-4">
                     <h5><i class="fas fa-link me-2"></i> Мы в соцсетях</h5>
                     <div class="d-flex flex-wrap gap-2 mt-2">
                         {% for link in external_links %}
                             <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-success btn-sm">
-                                {% if link.link_type == 'vkontakte' %}
-                                    <i class="fab fa-vk me-1"></i>
-                                {% elif link.link_type == 'rutube' %}
-                                    <i class="fas fa-video me-1"></i>
-                                {% else %}
-                                    <i class="fas fa-external-link-alt me-1"></i>
-                                {% endif %}
+                                {% if link.link_type == 'vkontakte' %}<i class="fab fa-vk me-1"></i>
+                                {% elif link.link_type == 'rutube' %}<i class="fas fa-video me-1"></i>
+                                {% else %}<i class="fas fa-external-link-alt me-1"></i>{% endif %}
                                 {{ link.title|default:link.get_link_type_display }}
                             </a>
                         {% endfor %}
                     </div>
                     {% if community.user_can_manage %}
-                        <div class="mt-2 text-center">
-                            <a href="{% url 'community_add_link' community.slug %}" class="small">Добавить ссылку</a>
-                        </div>
+                        <div class="mt-2 text-center"><a href="{% url 'community_add_link' community.slug %}" class="small">Добавить ссылку</a></div>
                     {% endif %}
                 </div>
             {% else %}
@@ -136,17 +122,13 @@
                 {% endif %}
             {% endif %}
 
-            <!-- Статистика -->
             <div class="card-glass p-3 mb-4">
                 <h5><i class="fas fa-chart-simple me-2"></i> Статистика</h5>
                 <p><i class="fas fa-users"></i> Участников: {{ community.member_count }}</p>
                 <p><i class="fas fa-calendar-alt"></i> Создано: {{ community.created_at|date:"d.m.Y" }}</p>
-                {% if community.tags %}
-                    <p><i class="fas fa-tags"></i> Теги: {{ community.tags }}</p>
-                {% endif %}
+                {% if community.tags %}<p><i class="fas fa-tags"></i> Теги: {{ community.tags }}</p>{% endif %}
             </div>
 
-            <!-- Топ участников -->
             <div class="card-glass p-3">
                 <h5><i class="fas fa-trophy me-2"></i> Активные участники (неделя)</h5>
                 <ul class="list-unstyled">
@@ -157,16 +139,13 @@
                     {% endfor %}
                 </ul>
                 {% if community.user_can_manage %}
-                    <div class="text-center mt-2">
-                        <a href="{% url 'community_manage' community.slug %}" class="small">Управление участниками</a>
-                    </div>
+                    <div class="text-center mt-2"><a href="{% url 'community_manage' community.slug %}" class="small">Управление участниками</a></div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Модальное окно для вступления в закрытое сообщество -->
 {% if community.is_private and not membership %}
 <div class="modal fade" id="joinPrivateModal" tabindex="-1">
     <div class="modal-dialog">

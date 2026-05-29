@@ -44,8 +44,8 @@ urlpatterns = [
     # ========== МАРШРУТЫ ДЛЯ СООБЩЕСТВ ==========
     path('communities/all/', views.community_list, name='community_list'),
     path('community/create/', views.community_create, name='community_create'),
+    path('community/<slug:slug>/chat/', views.community_chat, name='community_chat'),
     path('community/<slug:slug>/', views.community_detail, name='community_detail'),
-    path('community/<slug:slug>/chat/', views.community_chat, name='community_chat'),   # ДОБАВЛЕНО
     path('community/<slug:slug>/join/', views.community_join, name='community_join'),
     path('community/<slug:slug>/leave/', views.community_leave, name='community_leave'),
     path('community/<slug:slug>/post/add/', views.community_add_post, name='community_add_post'),

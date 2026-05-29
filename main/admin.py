@@ -8,17 +8,18 @@ from .models import (
 )
 
 
-# ---- Inline для сообществ ----
 class CommunityMembershipInline(admin.TabularInline):
     model = CommunityMembership
     extra = 0
     fields = ['user', 'role', 'is_banned', 'joined_at']
     readonly_fields = ['joined_at']
 
+
 class CommunityExternalLinkInline(admin.TabularInline):
     model = CommunityExternalLink
     extra = 1
     fields = ['link_type', 'url', 'title', 'icon_class', 'order', 'is_active']
+
 
 class CommunityPostInline(admin.TabularInline):
     model = CommunityPost
@@ -72,7 +73,6 @@ class CommunityExternalLinkAdmin(admin.ModelAdmin):
     search_fields = ['community__name', 'url']
 
 
-# ---- Остальные админки ----
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'total_points', 'coins', 'tulips', 'level', 'streak_days', 'lessons_completed', 'is_author', 'created_at']

@@ -6,8 +6,6 @@ from django.dispatch import receiver
 from datetime import timedelta
 
 
-# ---------- Существующие модели ----------
-
 class Course(models.Model):
     LEVEL_CHOICES = [
         ('beginner', 'Начинающий'),
@@ -53,7 +51,7 @@ class Course(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if not self.slug:
+        if not self.slug or self.slug == '':
             from django.utils.text import slugify
             self.slug = slugify(self.title)
         if self.status == 'published' and not self.published_at:
@@ -99,6 +97,7 @@ class Community(models.Model):
     description = models.CharField('Краткое описание', max_length=200)
     member_count = models.PositiveIntegerField('Количество участников', default=0)
     is_active = models.BooleanField('Активно', default=True)
+    is_approved = models.BooleanField('Одобрено модератором', default=True)
     order = models.PositiveIntegerField('Порядок', default=0)
     courses = models.ManyToManyField(Course, related_name='communities', blank=True, verbose_name='Связанные курсы')
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_communities',
@@ -122,7 +121,13 @@ class Community(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
-            self.slug = slugify(self.name)
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            while Community.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
 
     def user_can_manage(self, user):
@@ -204,7 +209,6 @@ class CommunityExternalLink(models.Model):
         return f'{self.community.name} - {self.get_link_type_display()}'
 
 
-# ---------- Модели чата ----------
 class CommunityChatRoom(models.Model):
     community = models.OneToOneField(Community, on_delete=models.CASCADE, related_name='chat_room')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -224,7 +228,6 @@ class ChatMessage(models.Model):
         ordering = ['timestamp']
 
 
-# ---------- Остальные модели (Achievement, Question и т.д.) ----------
 class Achievement(models.Model):
     name = models.CharField('Название достижения', max_length=100)
     icon_class = models.CharField('Иконка (Font Awesome)', max_length=50, default='fas fa-medal')
@@ -310,30 +313,11 @@ class CourseEnrollment(models.Model):
 
 
 LEVEL_XP_BOUNDS = {
-    1: (0, 59),
-    2: (60, 119),
-    3: (120, 199),
-    4: (200, 299),
-    5: (300, 449),
-    6: (450, 749),
-    7: (750, 1124),
-    8: (1125, 1649),
-    9: (1650, 2249),
-    10: (2250, 2999),
-    11: (3000, 3899),
-    12: (3900, 4899),
-    13: (4900, 5999),
-    14: (6000, 7499),
-    15: (7500, 8999),
-    16: (9000, 10499),
-    17: (10500, 11999),
-    18: (12000, 13499),
-    19: (13500, 14999),
-    20: (15000, 16999),
-    21: (17000, 18999),
-    22: (19000, 22499),
-    23: (22500, 25999),
-    24: (26000, 29999),
+    1: (0, 59), 2: (60, 119), 3: (120, 199), 4: (200, 299), 5: (300, 449),
+    6: (450, 749), 7: (750, 1124), 8: (1125, 1649), 9: (1650, 2249), 10: (2250, 2999),
+    11: (3000, 3899), 12: (3900, 4899), 13: (4900, 5999), 14: (6000, 7499), 15: (7500, 8999),
+    16: (9000, 10499), 17: (10500, 11999), 18: (12000, 13499), 19: (13500, 14999), 20: (15000, 16999),
+    21: (17000, 18999), 22: (19000, 22499), 23: (22500, 25999), 24: (26000, 29999),
 }
 
 
@@ -631,7 +615,6 @@ class CustomTestResult(models.Model):
         ordering = ['-completed_at']
 
 
-# Сигналы
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:

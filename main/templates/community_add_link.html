@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Добавить ссылку{% endblock %}
+{% block content %}
+<div class="container-custom py-5" style="margin-top: 100px;">
+    <div class="card-glass p-5">
+        <h1 class="section-title">Добавить ссылку в «{{ community.name }}»</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn-primary-custom">Добавить</button>
+            <a href="{% url 'community_detail' community.slug %}" class="btn-outline-custom">Отмена</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
